@@ -4,12 +4,14 @@ set -a
 # Nek5000 config
 #-------------------------------------------------------------------------------
 
+source Cantera.mak
+
 # source path 
 #NEK_SOURCE_ROOT="$HOME/Nek5000" 
 
 # Fortran/C compiler
-#FC="mpif77"
-#CC="mpicc"
+FC="mpif77"
+CC="mpicc"
 
 # Linker
 #LD="$FC"
@@ -22,7 +24,7 @@ set -a
 #-------------------------------------------------------------------------------
 
 # optional compiler flags
-#FFLAGS=""
+FFLAGS="-g -Wl,-rpath=$CANTERA_LIBS -L$CANTERA_LIBS -lcantera_fortran -lcantera -ldl -lhdf5 -lstdc++ -I $HOME/Nek5000-Comp/src"
 #CFLAGS=""
 
 # optional linking flags
@@ -31,7 +33,7 @@ set -a
 # auxilliary files to compile
 # NOTE: source files have to located in the same directory as makenek
 #       a makefile_usr.inc has to be provided containing the build rules 
-#USR="foo.o"
+USR="runcomp.o compcfl.o rungeKutta.o dgdiv.o dgrhs.o compvar.o fluxLF.o entrovisc.o compbc.o viscous.o compf.o advect.o"
 
 # MPI (default 1) 
 #MPI=0
@@ -51,13 +53,13 @@ set -a
 ###############################################################################
 # DONT'T TOUCH WHAT FOLLOWS !!!
 ###############################################################################
-: ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+: ${NEK_SOURCE_ROOT:="$HOME/Nek5000-Comp"}
 echo "using source path: $NEK_SOURCE_ROOT"
 VERMAKENEK="19.0.1"
 set +a -e
-$NEK_SOURCE_ROOT/bin/nekconfig $@
-if [[ $1 != "clean" && $1 != "distclean" ]]; then
- $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+$NEK_SOURCE_ROOT/bin/nekconfig_ct $@
+if [[ $1 != "clean" ]]; then
+ $NEK_SOURCE_ROOT/bin/nekconfig_ct -build-dep
  set -o pipefail
  touch $1.usr 
  make -j4 2>&1 | tee -a build.log

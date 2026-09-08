@@ -1,0 +1,110 @@
+c---------------------------------------------------------------------
+      integer lf
+      parameter(lf=lx1*lz1*2*ldim*lelt)
+c---------------------------------------------------------------------
+      integer U_EQ,V_EQ,W_EQ,E_EQ,N_EQ
+      parameter(U_EQ=1)            ! rhoU
+      parameter(V_EQ=2)            ! rhoV
+      parameter(W_EQ=3)            ! rhoW 
+      parameter(E_EQ=4)            ! rhoE 
+      parameter(N_EQ=E_EQ+nspec)   ! # of equations
+c --------------------------------------------------------------------
+      real R_u
+      parameter(R_u=8.3144598)     ! universal gas constant
+c --------------------------------------------------------------------
+      logical ifviscous,ifforces,ifavisc,ifsplitchem
+      logical ifclip,if1D,ifpplim
+      logical ifIntLLFfull,ifVolEC
+
+      real aspd(lx1,ly1,lz1,lelt)             ! sound speed
+      real spd(lx1,ly1,lz1,lelt)              ! speed
+      real mach(lx1,ly1,lz1,lelt)             ! Ma 
+      real dgeh(lx1,ly1,lz1,lelt)             ! (rho*e+p)/rho
+      real enmu(lx1,ly1,lz1,lelt)             ! AV: tilde(nu)
+      real rhoS1(lx1,ly1,lz1,lelt)            ! [rho*S](t^[n-1])
+      real rhoS2(lx1,ly1,lz1,lelt)            ! [rho*S](t^[n-2])
+      real enhe(lx1,ly1,lz1,lelt)             ! h_e
+      real enhemax(lelt)
+      real eta(lx1,ly1,lz1,lelt)     
+      real thta(lx1,ly1,lz1,lelt)             ! Ducros sensor
+      real temp1(lx1,ly1,lz1,lelt)            ! temperature
+      real vis1(lx1,ly1,lz1,lelt)             ! mixture-averaged dynamic viscosity
+      real cond1(lx1,ly1,lz1,lelt)            ! mixture-averaged thermal conductivity
+      real diff1(lx1,ly1,lz1,lelt,nspec)      ! mixture-averaged diffusion coefficient       
+      real gamma(lx1,ly1,lz1,lelt)            ! cp/cv
+      real wmean(lx1,ly1,lz1,lelt)            ! mean weight fraction
+      real Yi(lx1,ly1,lz1,lelt,nspec)         ! mass fraction
+      real Xi(lx1,ly1,lz1,lelt,nspec)         ! mole fraction
+      real wdot(lx1,ly1,lz1,lelt,nspec)       ! species reaction rates
+      real hh(lx1,ly1,lz1,lelt,nspec)         ! species enthalpy
+      real ss(lx1,ly1,lz1,lelt)               ! mixture entropy
+      real rhoS(lx1,ly1,lz1,lelt)             ! rho*s
+      real si(lx1,ly1,lz1,lelt,nspec)         ! species specific entropy
+      real ui(lx1,ly1,lz1,lelt,nspec)         ! species specific internal energy
+      real uu(lx1,ly1,lz1,lelt)               ! mixture internal energy
+      real ushift(lx1,ly1,lz1,lelt)           ! mixture shifted internal energy
+
+      real mw(nspec)                          ! molecular weight
+      real s0(nspec)                          ! standard enthalpy @ 298.15K
+      real s0min                              ! minimum entropy in domain at t=0 
+      real h0(nspec)                          ! reference enthalpy @ 298.15K
+      real aa(npa*nspec)                      ! continuous refit NASA polynomials
+      real bi((npa+1)*nspec)                  ! polynomial for internal energy
+
+      ! U at interface
+      real rhof(lf),uf(lf),uxf(lf),uyf(lf),uzf(lf),temp1f(lf)            
+      real prf(lf),dgehf(lf),Xif(lf,nspec),Yif(lf,nspec)
+      real consf(lf,N_EQ)
+      real flux1f(lf,N_EQ),flux2f(lf,N_EQ),flux3f(lf,N_EQ)
+      real xm1f(lf),ym1f(lf),zm1f(lf)
+      real ssf(lf)
+
+      ! U+U_neighbor at interface
+      real rhopi(lf),uxpi(lf),uypi(lf),uzpi(lf),temp1pi(lf)   
+      real prpi(lf),dgehpi(lf),Xipi(lf,nspec),Yipi(lf,nspec)
+      real conspi(lf,N_EQ)
+      real flux1pi(lf,N_EQ),flux2pi(lf,N_EQ),flux3pi(lf,N_EQ)
+      
+      ! boundary ghost node
+      real rhobf(lf),uxbf(lf),uybf(lf),uzbf(lf),temp1bf(lf)     
+      real prbf(lf),dgehbf(lf),Yibf(lf,nspec),Xibf(lf,nspec)
+
+      ! artificial viscosity
+      real lmf(lf),lmfvis(lf)            
+
+      real dudx(lx1,ly1,lz1,lelt)
+      real dudy(lx1,ly1,lz1,lelt)
+      real dudz(lx1,ly1,lz1,lelt)
+      real dvdx(lx1,ly1,lz1,lelt)
+      real dvdy(lx1,ly1,lz1,lelt)
+      real dvdz(lx1,ly1,lz1,lelt)
+      real dwdx(lx1,ly1,lz1,lelt)
+      real dwdy(lx1,ly1,lz1,lelt)
+      real dwdz(lx1,ly1,lz1,lelt)
+
+      common /comp_flux1/ lmf,lmfvis
+      common /comp_flux2/ uf,uxf,uyf,uzf,rhof,prf,dgehf,Yif
+      common /comp_flux3/ uxpi,uypi,uzpi,rhopi,prpi,dgehpi,Yipi
+      common /comp_flux4/ temp1f,temp1pi,temp1bf
+      common /comp_flux5/ rhobf,uxbf,uybf,uzbf,prbf,dgehbf,Yibf,Xibf
+      common /comp_temp1/ conspi,consf
+      common /comp_temp2/ xm1f,ym1f,zm1f
+      common /comp_arvs1/ enmu,rhoS1,rhoS2,enhe,enhemax,eta
+      common /comp_flags1/ ifviscous,ifforces,ifavisc,ifsplitchem
+      common /comp_flags2/ ifclip,if1D,ifpplim
+      common /comp_flags3/ ifIntLLFfull,ifVolEC
+      common /comp_deriv1/ dudx,dudy,dudz
+      common /comp_deriv2/ dvdx,dvdy,dvdz
+      common /comp_deriv3/ dwdx,dwdy,dwdz
+      common /comp_vars1/ temp1,vis1,cond1,diff1,gamma
+      common /comp_vars2/ wmean,Yi,mw
+      common /comp_vars3/ aspd,spd,mach,dgeh
+      common /comp_vars4/ thta
+      common /comp_vars5/ hh
+      common /comp_vars6/ wdot
+      common /comp_vars7/ Xi,Xipi,Xif
+      common /comp_vars8/ ss,si,s0,rhoS
+      common /comp_vars9/ flux1pi,flux2pi,flux3pi
+      common /comp_vars10/ flux1f,flux2f,flux3f
+      common /comp_vars11/ ui,h0,bi,aa,uu,ushift,s0min,ssf
+c---------------------------------------------------------------------      
