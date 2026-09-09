@@ -24,7 +24,7 @@ CC="mpicc"
 #-------------------------------------------------------------------------------
 
 # optional compiler flags
-FFLAGS="-g -Wl,-rpath=$CANTERA_LIBS -L$CANTERA_LIBS -lcantera -ldl -lhdf5 -lstdc++ -I$HOME/Nek5000-Comp/src"
+FFLAGS="-g -Wl,-rpath=$CANTERA_LIBS -L$CANTERA_LIBS -lcantera -ldl -lhdf5 -lstdc++ -I$HOME/CompNek5000/src"
 #CFLAGS=""
 
 # optional linking flags
@@ -53,7 +53,7 @@ USR="runcomp.o compcfl.o rungeKutta.o dgdiv.o dgrhs.o compvar.o fluxLF.o entrovi
 ###############################################################################
 # DONT'T TOUCH WHAT FOLLOWS !!!
 ###############################################################################
-: ${NEK_SOURCE_ROOT:="$HOME/Nek5000-Comp"}
+: ${NEK_SOURCE_ROOT:="$HOME/CompNek5000"}
 echo "using source path: $NEK_SOURCE_ROOT"
 VERMAKENEK="19.0.1"
 set +a -e
