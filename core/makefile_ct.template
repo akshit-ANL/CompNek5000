@@ -24,7 +24,6 @@ USR=
 USR_LFLAGS=
 
 MPI=0 
-DPROCMAP=0
 VISIT=0
 
 VISIT_IFLAGS=
@@ -34,6 +33,8 @@ GSLIB_IFLAGS=
 PARRSB_IFLAGS=
 
 ################################################################################
+
+PPS+=${PPLIST}
 
 PPS_F = $(patsubst %,$(PPPO)-D%,$(PPS))
 PPS_C = $(patsubst %,-D%,$(PPS))
@@ -54,10 +55,10 @@ vprops.o makeq_aux.o \
 papi.o nek_in_situ.o \
 reader_rea.o reader_par.o reader_re2.o \
 finiparser.o iniparser.o dictionary.o \
-hpf.o \
+hpf.o hrefine.o \
 fcrs.o crs_xxt.o crs_amg.o \
 fem_amg_preco.o crs_hypre.o \
-partitioner.o
+partitioner.o dprocmap.o
 ################################################################################
 # MXM 
 MXM =  
@@ -69,9 +70,9 @@ ifeq ($(MPI),0)
 endif
 
 $(info $(shell mkdir -p $(OBJDIR)))
+ifeq ($(filter -DDPROCMAP,$(PPS_F)),)
 DUMMY:= $(shell cp $S/core/PARALLEL.default $(OBJDIR)/PARALLEL 2>/dev/null)
-ifeq ($(DPROCMAP),1)
-	CORE := ${CORE} dprocmap.o
+else
  	DUMMY:= $(shell cp $S/core/PARALLEL.dprocmap $(OBJDIR)/PARALLEL 2>/dev/null)
 endif
 
@@ -220,6 +221,7 @@ $(OBJDIR)/reader_rea.o	:$S/core/reader_rea.f;	 	        $(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/reader_par.o	:$S/core/reader_par.f $S/core/PARDICT;	$(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/reader_re2.o	:$S/core/reader_re2.f;		        $(FC) -c $(FL2) $< -o $@
 $(OBJDIR)/hpf.o	       	:$S/core/hpf.f;         		$(FC) -c $(FL2) $< -o $@
+$(OBJDIR)/hrefine.o		:$S/core/hrefine.f;         		$(FC) -c $(FL2) $< -o $@
 
 # MXM       ############################################################################
 $(OBJDIR)/mxm_wrapper.o	  :$S/core/mxm_wrapper.f;	$(FC) -c $(FL2) $< -o $@ 

@@ -24,7 +24,7 @@ CC="mpicc"
 #-------------------------------------------------------------------------------
 
 # optional compiler flags
-FFLAGS="-g -Wl,-rpath=$CANTERA_LIBS -L$CANTERA_LIBS -lcantera_fortran -lcantera -ldl -lhdf5 -lstdc++ -I $HOME/Nek5000-Comp/src"
+FFLAGS="-g -Wl,-rpath=$CANTERA_LIBS -L$CANTERA_LIBS -lcantera -ldl -lhdf5 -lstdc++ -I$HOME/Nek5000-Comp/src"
 #CFLAGS=""
 
 # optional linking flags
