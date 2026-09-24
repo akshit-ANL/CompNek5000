@@ -17,7 +17,7 @@ CC="mpicc"
 #LD="$FC"
 
 # config options (set to "?" to get a list)
-#PPLIST="PARRSB DPROCMAP HYPRE" 
+PPLIST="PARRSB HYPRE" 
 
 #-------------------------------------------------------------------------------
 # WHAT FOLLOWS ARE OPTIONAL SETTINGS
