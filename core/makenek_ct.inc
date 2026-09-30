@@ -251,7 +251,7 @@ case $FCcomp in
                ;;
   *gfortran*)  FCPP="-cpp"
                FR8="-fdefault-real-8 -fdefault-double-8"
-               FF77="-w -std=legacy"
+               FF77="-w -std=legacy -ffixed-line-length-132"
                ;;
   *ftn*)       FCPP="-eZ"
                FR8="-sreal64"
@@ -266,9 +266,11 @@ case $FCcomp in
                ;;
   *ifort*)     FCPP="-fpp"
                FR8="-r8 -fpconstant"
+               FF77="-extend_source"
                ;;
   *ifx*)       FCPP="-fpp"
                FR8="-r8 -fpconstant"
+               FF77="-extend_source"
                ;;
   *xlf*)       FCPP="-qsuffix=cpp=f"
                FR8="-qrealsize=8 -qdpc=e"
