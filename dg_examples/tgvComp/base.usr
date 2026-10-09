@@ -1,0 +1,370 @@
+c-----------------------------------------------------------------------
+      subroutine uservp(ix,iy,iz,eg)
+
+      integer ix,iy,iz,eg
+     
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      udiff  = 0.0
+      utrans = 0.0
+
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,eg)
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0
+      ffy = 0.0
+      ffz = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq(ix,iy,iz,eg)
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer e
+c     e = gllel(eg)
+
+      qvol   = 0.0
+
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,eg)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer ix,iy,iz,iside,eg
+      character cb*3
+
+      ie = gllel(eg)
+
+      cb = cbc(iside,ie,1)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc_comp(x,y,z,bID,cb,ux,uy,uz,pp,temp,yy)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      real pp,temp,yy(nspec)
+      integer bID
+      real x,y,z
+      real ux,uy,uz
+      integer b
+      character cb*3
+ 
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine useric(ix,iy,iz,eg)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      include 'COMPRESS'
+
+      integer ix,iy,iz,eg
+
+      real yic(nspec)
+
+      real density,intEnergy_mass
+      real intE,totE,kinE
+
+      real df2,tmp0,tmp1,xcen
+      integer b
+
+      common /my_ref/ L0,U0,rho0,PP0,T0,mu0,Re0
+      real L0,U0,rho0,PP0,T0,mu0,Re0
+
+      e = gllel(eg)
+
+      ! primative variables
+      yic(1) = 0.23
+      yic(2) = 0.77
+      tmpic = T0
+      arg1 = cos(2.*x/L0) + cos(2.*y/L0)
+      pric = PP0 + (rho0*U0**2./16.) * arg1 * (cos(2.*z/L0)+2.)
+      vxic = U0*sin(x/L0)*cos(y/L0)*cos(z/L0)
+      vyic = -U0*cos(x/L0)*sin(y/L0)*cos(z/L0) 
+      vzic = 0.
+
+      ! set state
+      call setstate_tpy(tmpic, pric, yic)
+      rhoic = density()
+      intE = intEnergy_mass()
+      spdic = sqrt(vxic*vxic+vyic*vyic+vzic*vzic)
+      kinE = 0.5*spdic**2
+      totE = intE+kinE
+
+      if(ifield.eq.(U_EQ+1))then       ! rhoU
+         temp = rhoic*vxic
+      elseif(ifield.eq.(V_EQ+1))then   ! rhoV
+         temp = rhoic*vyic
+      elseif(ifield.eq.(W_EQ+1))then   ! rhoW
+         temp = rhoic*vzic
+      elseif(ifield.eq.(E_EQ+1))then   ! rhoE
+         temp = rhoic*totE
+      elseif(ifield.ge.(E_EQ+2))then   ! rho*Y_i
+         temp = rhoic*yic(ifield-E_EQ-1)
+      endif
+
+      temp1(ix,iy,iz,e) = tmpic
+      pr(ix,iy,iz,e) = pric
+      vtrans(ix,iy,iz,e,1) = rhoic
+      dgeh(ix,iy,iz,e) = (rhoic*totE+pric)/rhoic
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      integer n,icout
+
+      integer cfreq
+      integer efreq
+
+      n = nx1*ny1*nz1*nelt
+      icout = -1
+
+      cfreq = 10
+      efreq = 10
+
+ccc run compressible step
+      call runcompdg
+      
+ccc output fields
+      if(ifoutfld.or.istep.lt.icout) then
+         do i=1,n
+           t(i,1,1,1,7) = vtrans(i,1,1,1,1)
+           t(i,1,1,1,8) = temp1(i,1,1,1)
+           t(i,1,1,1,9) = vis1(i,1,1,1)
+           t(i,1,1,1,10) = enmu(i,1,1,1)
+           t(i,1,1,1,11) = mach(i,1,1,1)
+         enddo
+      endif
+
+ccc initial conditions
+      if(istep.lt.icout) then
+         call outpost2(vx,vy,vz,pr,t,ldimt,'ics')
+      endif
+
+ccc output time history data
+      if(mod(istep,cfreq).eq.0) call check_cons()
+      if(mod(istep,efreq).eq.0) call check_energy()
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine check_energy()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      common /SCRNS/ w1 (lx1*ly1*lz1*lelv),
+     &               w2 (lx1*ly1*lz1*lelv),
+     &               omg(lx1*ly1*lz1*lelv,ldim)
+
+      common /my_ref/ L0,U0,rho0,PP0,T0,mu0,Re0
+      real L0,U0,rho0,PP0,T0,mu0,Re0
+
+      integer n
+
+      n = nx1*ny1*nz1*nelt
+
+      if(istep.eq.0.and.nid.eq.0) then
+        open(unit=54,file='tgvNekComp.dat',status='replace')
+        close(54)
+      endif
+
+      sum_e1 = 0.
+      sum_e2 = 0.
+      call curl(omg,vx,vy,vz,.false.,w1,w2)
+      do i = 1,n
+        vv = vx(i,1,1,1)**2 + vy(i,1,1,1)**2 + vz(i,1,1,1)**2 ! KE
+        vv = vv * vtrans(i,1,1,1,1)
+        oo = omg(i,1)**2 + omg(i,2)**2 + omg(i,3)**2 ! enstrophy
+        oo = oo * vis1(i,1,1,1)/mu0
+        sum_e1 = sum_e1 + vv*bm1(i,1,1,1) 
+        sum_e2 = sum_e2 + oo*bm1(i,1,1,1) 
+      enddo
+      sum_e1 = sum_e1/(2.*rho0*U0**2.)     ! non-dimensionalize
+      sum_e2 = sum_e2*L0**2./(Re0*U0**2.)  ! non-dimensionalize
+      e1 = glsum(sum_e1,1) / volvm1
+      e2 = glsum(sum_e2,1) / volvm1
+
+      if(nid.eq.0.and.istep.gt.0) then
+         open(unit=54,file='tgvNekComp.dat',access='append')
+         write(54,3) time*U0/L0,e1,e2
+  3      format(E13.5,E15.7,E15.7)
+         close(54)
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine check_cons()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      common /my_cons/ m0,e0
+      real m0,m1,mc
+      real e0,e1,ec
+
+      integer n
+
+      n = nx1*ny1*nz1*nelt
+
+      if(istep.eq.0) then
+         m0 = glsc2(vtrans(1,1,1,1,1),bm1,n)
+         e0 = glsc2(t(1,1,1,1,E_EQ),bm1,n)
+         if(nid.eq.0) then
+            write(*,*)'m0=',m0
+            write(*,*)'e0=',e0
+            open(unit=57,file='cons.dat',status='replace')
+            close(57)
+         endif
+      endif
+
+      m1 = glsc2(vtrans(1,1,1,1,1),bm1,n)
+      e1 = glsc2(t(1,1,1,1,E_EQ),bm1,n)
+      mc = (m0-m1)/m0
+      ec = (e0-e1)/e0
+
+      if(nid.eq.0.and.istep.gt.0) then
+         open(unit=57,file='cons.dat',access='append')
+         write(57,3) time,mc,ec
+  3      format(E13.5,E15.7,E15.7)
+         close(57)
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userqtl
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      character*20 sname
+      integer b
+
+      common /my_ref/ L0,U0,rho0,PP0,T0,mu0,Re0
+      real L0,U0,rho0,PP0,T0,mu0,Re0
+
+ccc initiate Cantera
+      call newIdealGasMix('air1.yaml',
+     $                    'air','mixture-averaged')
+      call getmolecularweights(mw)
+      if(nid.eq.0) write(*,*) 'species       mol wt'
+      do i=1,nspec
+        mw(i) = mw(i)*1.e-3
+        call getSpeciesName(i, sname)
+        if(nid.eq.0) then
+           write(*,3) i,sname,mw(i)
+  3        format (I6.2,' ',a7,F7.4)
+        endif 
+      enddo
+
+ccc refit of NASA-7 polynomials
+      open(unit=202,file='aa.dat',form='formatted',status='old')
+      read(202,*) aa
+      close(202)
+
+ccc reference enthalpy @ 298.15 K
+      open(unit=203,file='h0.dat',form='formatted',status='old')
+      read(203,*) h0
+      close(203)
+
+ccc standard entropy @ 298.15 K and Patm=101325
+      open(unit=204,file='s0.dat',form='formatted',status='old')
+      read(204,*) s0
+      close(204)
+
+ccc calculate bi array for interal energy
+      call get_bi()
+
+ccc ref values for Re=1600 M=1.25 TGV
+      L0 = 5.92648e-5
+      U0 = 434.8475
+      rho0 = 1.15621
+      PP0 = 1.e5
+      T0 = 300.
+      mu0 = 1.8623e-05
+      Re0 = 1600.003
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2()
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      common /my_ref/ L0,U0,rho0,PP0,T0,mu0,Re0
+      real L0,U0,rho0,PP0,T0,mu0,Re0
+
+      a = -pi*L0
+      b = pi*L0
+      call rescale_x(xm1,a,b)
+      call rescale_x(ym1,a,b)
+      call rescale_x(zm1,a,b)
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      ifflow = .false.       ! required for Nek interface
+      ifheat = .true.        ! required for Nek interface
+      ifdg   = .true.        ! required for Nek interface
+
+      ifviscous    = .true.  ! viscous terms
+      ifforces     = .false. ! user forces
+      ifavisc      = .false. ! artificial viscosity
+      ifsplitchem  = .false. ! Strang splitting
+      ifclip       = .false. ! clip mass fractions/temp
+      if1D         = .false. ! force 1D
+      ifpplim      = .false. ! positivity-preserving limiter
+      ifIntLLFfull = .false. ! full LLF in interface term
+      ifVolEC      = .false. ! EC volume terms
+
+      return
+      end
+c---------------------------------------------------------------------

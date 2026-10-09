@@ -1,0 +1,80 @@
+[GENERAL]
+#startFrom = backup.dat # time=0.0
+
+stopAt = endTime
+endTime = 2.73e-6
+writeControl = runTime
+writeInterval = 1.365e-7
+
+#stopAt = endTime
+#endTime = 2.13e-6
+#writeControl = runTime
+#writeInterval = 100
+
+#stopAt = numSteps
+#numSteps = 1
+#writeControl = timeStep
+#writeInterval = 3000
+
+dt = 2.5e-10 # no splitting
+
+variableDT = no
+
+userparam01 = 2.0e-9 # chemistry dt
+
+userparam02 = 1.0  # cstar
+userparam03 = 0.3  # cmax
+userparam04 = 0.7  # P
+
+dealiasing = no
+
+[PROBLEMTYPE]
+equation = incompNS
+
+[PRESSURE]
+residualTol = 1e-5
+residualProj = yes
+
+[VELOCITY]
+residualTol = 1e-8
+density = 1.0
+viscosity = 1.0
+
+[TEMPERATURE] # rhoU
+rhocp = 1.0
+conductivity = 1.0
+
+[SCALAR01]    # rhoV
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR02]    # rhoW
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR03]    # rhoE
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR04]    # rho*Y_O2
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR05]    # rho*Y_N2
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR06]    #
+solver = none
+
+[SCALAR07]    #
+solver = none
+
+[SCALAR08]    # 
+solver = none
+
+[SCALAR09]    # 
+solver = none
+
+[SCALAR10]    # 
+solver = none
