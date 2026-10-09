@@ -1,0 +1,28 @@
+-2                      spatial dimension
+24                      number of fields
+#=============================================================
+Box
+-1500 -500           nelx,nely,nelz for Box
+0 0.30 1            x0 x1 ratio 
+0 0.06 1            y0 y1 ratio 
+SYM,SYM,SYM,SYM,    V bc's  !      NB:  3 characters each !
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!
+I  ,I  ,SYM,SYM,    T bc's  !      You must have 2 spaces!!

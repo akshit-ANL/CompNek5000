@@ -1,0 +1,114 @@
+[GENERAL]
+#startFrom = backup.dat # time=0.0
+
+stopAt = endTime
+endTime = 100e-6 # 240e-6
+writeControl = runTime
+writeInterval = 5e-6
+
+#stopAt = numSteps
+#numSteps = 1
+#writeControl = timeStep
+#writeInterval = 10000
+
+dt = 7.0e-9    # splitting
+#dt = 1.0e-9    # no splitting
+
+variableDT = no
+
+userparam01 = 5.0e-10 # chemistry dt
+
+userparam02 = 1.0  # cstar
+userparam03 = 0.3  # cmax
+userparam04 = 0.7  # P
+
+dealiasing = no
+
+writeDoublePrecision = no
+
+[PROBLEMTYPE]
+equation = incompNS
+
+[PRESSURE]
+residualTol = 1e-5
+residualProj = yes
+preconditioner = semg_amg_hypre
+
+[VELOCITY]
+residualTol = 1e-8
+density = 1.0
+viscosity = 1.0
+
+[TEMPERATURE] # rhoU
+rhocp = 1.0
+conductivity = 1.0
+
+[SCALAR01]    # rhoV
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR02]    # rhoW
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR03]    # rhoE
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR04]    # rho(Y_O)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR05]    # rho(Y_O2)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR06]    # rho(Y_H)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR07]    # rho(Y_H2)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR08]    # rho(Y_OH)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR09]    # rho(Y_HO2)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR10]    # rho(Y_H2O)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR11]    # rho(Y_H2O2)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR12]    # rho(Y_N2)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR13]    # rho(Y_Ar)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR14]    # rho
+solver = none
+
+[SCALAR15]    # T
+solver = none
+
+[SCALAR16]    # tdot
+solver = none
+
+[SCALAR17]    # nu
+solver = none
+
+[SCALAR18]    # s
+solver = none
+
+[SCALAR19]    # soot foil
+solver = none
