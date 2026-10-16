@@ -19,5 +19,5 @@ bin/pretex
 bin/prex
 bin/re2torea
 bin/reatore2
-
+docs/doxygen/
 __pycache__
