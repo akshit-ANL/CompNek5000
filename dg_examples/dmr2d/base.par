@@ -12,6 +12,10 @@ userparam02 = 1.0  # cstar
 userparam03 = 0.3  # cmax
 userparam04 = 0.7  # P
 
+userparam05 = 0    # interface flux: 0=LLF (original), 1=HLL, 2=HLLC, 3=HLLC/HLL blend
+userparam06 = 0.01 # blend: pressure-jump sensor below which pure HLLC is used
+userparam07 = 0.1  # blend: pressure-jump sensor above which pure HLL is used
+
 dealiasing = no
 
 writeDoublePrecision = no

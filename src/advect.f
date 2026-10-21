@@ -30,6 +30,11 @@ ccc See equation 28 of Zhang 2024
 
       integer i,j,e,iface,k,lnf
 
+      if(nint(uparam(5)).gt.0) then
+        call advect_interface_riemann(rkRHS)
+        return
+      endif
+
       lnf = nx1*nz1*2*ndim*nelt
 
       call rzero(uf,lnf)

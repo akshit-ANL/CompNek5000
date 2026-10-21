@@ -44,3 +44,18 @@ tools once, then generate `base.re2` and `base.ma2`:
 `dt` in `base.par` is fixed (5e-5). Check the printed C/aC/dC from
 `compress_cfl` and adjust. SIZE uses lx1 = 4 (p = 3); `lpmin` limits the
 smallest MPI rank count (lelt = lelg/lpmin + 3).
+
+## Interface flux selection (riemann-solvers branch)
+
+`userparam05` in `base.par` selects the interface flux:
+
+| value | flux |
+|---|---|
+| 0 | original LLF with the KEP central part (default) |
+| 1 | HLL |
+| 2 | HLLC |
+| 3 | HLLC blended into HLL by a face pressure-jump sensor |
+
+For 3, `alpha = clamp((s - userparam06)/(userparam07 - userparam06), 0, 1)`
+with `s = |pR - pL|/(pR + pL)`, and `F = alpha*F_HLL + (1-alpha)*F_HLLC`.
+Run the same mesh with 0, 2 and 3 and compare density at t = 0.2.

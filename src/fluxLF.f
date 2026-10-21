@@ -58,6 +58,7 @@ ccc primative variables
       call sum_neighbor(pr,prpi,prf)
       call sum_neighbor(dgeh,dgehpi,dgehf)
       call sum_neighbor(temp1,temp1pi,temp1f)
+      call sum_neighbor(gamma,gampi,gamf)
       do b=1,nspec
         call sum_neighbor(Yi(1,1,1,1,b),Yipi(1,b),Yif(1,b))
         call sum_neighbor(Xi(1,1,1,1,b),Xipi(1,b),Xif(1,b))

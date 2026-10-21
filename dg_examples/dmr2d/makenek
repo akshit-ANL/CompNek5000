@@ -18,7 +18,7 @@ PPLIST="PARRSB HYPRE"
 FFLAGS="-g -ffixed-line-length-132 -I$NEK_SOURCE_ROOT/src"
 
 # auxilliary files to compile (makefile_usr.inc provides the build rules)
-USR="runcomp.o compcfl.o rungeKutta.o dgdiv.o dgrhs.o compvar.o fluxLF.o entrovisc.o compbc.o viscous.o compf.o advect.o cantera_stubs.o"
+USR="runcomp.o compcfl.o rungeKutta.o dgdiv.o dgrhs.o compvar.o fluxLF.o entrovisc.o compbc.o viscous.o compf.o advect.o riemann.o cantera_stubs.o"
 
 ###############################################################################
 # DONT'T TOUCH WHAT FOLLOWS !!!
