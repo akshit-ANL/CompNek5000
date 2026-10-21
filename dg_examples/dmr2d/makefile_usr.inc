@@ -11,3 +11,5 @@ $(OBJDIR)/compbc.o      :$(S)/src/compbc.f;       $(FC) -c $(FL2) $(JL) $< -o $@
 $(OBJDIR)/viscous.o     :$(S)/src/viscous.f;      $(FC) -c $(FL2) $(JL) $< -o $@
 $(OBJDIR)/compf.o       :$(S)/src/compf.f;        $(FC) -c $(FL2) $(JL) $< -o $@
 $(OBJDIR)/cantera_stubs.o :$(S)/src/cantera_stubs.f;  $(FC) -c $(FL2) $(JL) $< -o $@
+
+$(OBJDIR)/riemann.o      :$(S)/src/riemann.f;      $(FC) -c $(FL2) $(JL) $< -o $@

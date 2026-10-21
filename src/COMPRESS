@@ -70,7 +70,10 @@ c --------------------------------------------------------------------
       real prbf(lf),dgehbf(lf),Yibf(lf,nspec),Xibf(lf,nspec)
 
       ! artificial viscosity
-      real lmf(lf),lmfvis(lf)            
+      real lmf(lf),lmfvis(lf)
+
+      ! gamma at interface and gamma+gamma_neighbor (Riemann solvers)
+      real gamf(lf),gampi(lf)
 
       real dudx(lx1,ly1,lz1,lelt)
       real dudy(lx1,ly1,lz1,lelt)
@@ -87,6 +90,7 @@ c --------------------------------------------------------------------
       common /comp_flux3/ uxpi,uypi,uzpi,rhopi,prpi,dgehpi,Yipi
       common /comp_flux4/ temp1f,temp1pi,temp1bf
       common /comp_flux5/ rhobf,uxbf,uybf,uzbf,prbf,dgehbf,Yibf,Xibf
+      common /comp_flux6/ gamf,gampi
       common /comp_temp1/ conspi,consf
       common /comp_temp2/ xm1f,ym1f,zm1f
       common /comp_arvs1/ enmu,rhoS1,rhoS2,enhe,enhemax,eta

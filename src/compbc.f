@@ -634,6 +634,7 @@ c     This routine adds the ghost node values bf to the pi (U+U_neighbor) values
            prpi(k) = prpi(k)+prbf(k)
            dgehpi(k) = dgehpi(k)+dgehbf(k)
            temp1pi(k) = temp1pi(k)+temp1bf(k)
+           gampi(k) = gampi(k)+gamf(k)   ! ghost gamma = interior gamma
            do b=1,nspec
              Yipi(k,b) = Yipi(k,b)+Yibf(k,b)
              Xipi(k,b) = Xipi(k,b)+Xibf(k,b)
