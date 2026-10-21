@@ -1,0 +1,61 @@
+[GENERAL]
+stopAt = endTime
+endTime = 0.2
+writeControl = runTime
+writeInterval = 0.02
+
+dt = 5.0e-5
+
+variableDT = no
+
+userparam02 = 1.0  # cstar
+userparam03 = 0.3  # cmax
+userparam04 = 0.7  # P
+
+dealiasing = no
+
+writeDoublePrecision = no
+
+[PROBLEMTYPE]
+equation = incompNS
+
+[PRESSURE]
+residualTol = 1e-5
+residualProj = no
+
+[VELOCITY]
+residualTol = 1e-8
+density = 1.0
+viscosity = 1.0
+
+[TEMPERATURE] # rhoU
+rhocp = 1.0
+conductivity = 1.0
+
+[SCALAR01]    # rhoV
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR02]    # rhoW
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR03]    # rhoE
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR04]    # rho*Y (single species, Y=1)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR05]    # rho
+solver = none
+
+[SCALAR06]    # T
+solver = none
+
+[SCALAR07]    # nu
+solver = none
+
+[SCALAR08]    # s
+solver = none

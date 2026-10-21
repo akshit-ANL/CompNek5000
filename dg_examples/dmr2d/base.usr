@@ -1,0 +1,272 @@
+c-----------------------------------------------------------------------
+c     Double Mach reflection (Woodward & Colella 1984)
+c     Mach 10 shock hitting a 30-degree ramp, in the wedge-aligned frame:
+c     domain [0,4]x[0,1], wall for x>1/6 on y=0, shock at 60 degrees.
+c     Calorically perfect gas, gamma=1.4, single species, no Cantera.
+c     Nondimensional: R=1 (mw=R_u), cp=gamma/(gamma-1)=3.5.
+c-----------------------------------------------------------------------
+#define GAMMA 1.4
+#define XWALL (1./6.)
+c-----------------------------------------------------------------------
+      subroutine dmr_state(x,y,t,rho,ux,uy,pp)
+c     exact initial/boundary state: post-shock left of the moving shock
+      implicit none
+      real x,y,t,rho,ux,uy,pp
+      real xs,sq3
+      sq3 = sqrt(3.)
+      xs  = XWALL + (y+20.*t)/sq3
+      if(x.lt.xs) then
+         rho = 8.0
+         pp  = 116.5
+         ux  = 8.25*cos(atan(1.)*4./6.)
+         uy  = -8.25*sin(atan(1.)*4./6.)
+      else
+         rho = GAMMA
+         pp  = 1.0
+         ux  = 0.
+         uy  = 0.
+      endif
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp(ix,iy,iz,eg) ! set variable properties
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      udiff  = 0.0
+      utrans = 0.0
+
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,eg) ! set acceleration term
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      ffx = 0.0
+      ffy = 0.0
+      ffz = 0.0
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq(ix,iy,iz,eg) ! set source term
+
+      integer ix,iy,iz,eg
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      qvol   = 0.0
+
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,eg)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+
+      integer ix,iy,iz,iside,eg
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc_comp(x,y,z,bID,cb,ux,uy,uz,pp,temp,yy)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      real pp,temp,yy(nspec)
+      integer bID
+      real x,y,z
+      real ux,uy,uz
+      character cb*3
+
+      real rho
+
+c     fully prescribed state (supersonic inflow): exact shock position
+      call dmr_state(x,y,time,rho,ux,uy,pp)
+      uz   = 0.
+      temp = pp/(rho*R_u/mw(1))
+      yy(1) = 1.0
+
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine useric(ix,iy,iz,eg)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      include 'COMPRESS'
+
+      integer ix,iy,iz,eg
+
+      real yic(nspec)
+      real intE,totE,kinE,uii
+      real vxic,vyic,vzic,pric,rhoic,tmpic
+      integer e,b,c,j
+
+      e = gllel(eg)
+
+      call dmr_state(x,y,0.,rhoic,vxic,vyic,pric)
+      vzic = 0.
+      yic(1) = 1.0
+      tmpic = pric/(rhoic*R_u/mw(1))
+
+ccc u/e
+      intE = 0.
+      do b=1,nspec
+        j = (b-1)*(npa+1)
+        uii = 0.
+        do c=1,npa+1
+          uii = uii + bi(j+c)*tmpic**(c-1)
+        enddo
+        intE = intE + yic(b)*uii
+      enddo
+      kinE = 0.5*(vxic**2+vyic**2+vzic**2)
+      totE = intE+kinE
+
+ccc assign Nek arrays
+      if(ifield.eq.(U_EQ+1))then       ! rhoU
+         temp = rhoic*vxic
+      elseif(ifield.eq.(V_EQ+1))then   ! rhoV
+         temp = rhoic*vyic
+      elseif(ifield.eq.(W_EQ+1))then   ! rhoW
+         temp = rhoic*vzic
+      elseif(ifield.eq.(E_EQ+1))then   ! rhoE
+         temp = rhoic*totE
+      elseif(ifield.ge.(E_EQ+2))then   ! rho*Y_i
+         temp = rhoic*yic(ifield-E_EQ-1)
+      endif
+
+      vtrans(ix,iy,iz,e,1) = rhoic
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      integer n,i
+
+      n = nx1*ny1*nz1*nelt
+
+ccc run compressible step
+      call runcompdg
+
+ccc output fields: rho, T, AV coefficient, entropy
+      if(ifoutfld) then
+         do i=1,n
+           t(i,1,1,1,5) = vtrans(i,1,1,1,1)
+           t(i,1,1,1,6) = temp1(i,1,1,1)
+           t(i,1,1,1,7) = enmu(i,1,1,1)
+           t(i,1,1,1,8) = ss(i,1,1,1)-s0min
+         enddo
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userqtl
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      integer c
+
+ccc perfect gas, R=1: mw=R_u so that R_u/mw=1
+      mw(1) = R_u
+
+ccc cp = gamma/(gamma-1)*R as the constant NASA-7 coefficient
+      do c=1,npa
+        aa(c) = 0.
+      enddo
+      aa(1) = GAMMA/(GAMMA-1.)*R_u/mw(1)
+
+ccc zero internal energy at T=0: bi(1)=h0-sum(aa*298.15^c/c)=0
+      h0(1) = aa(1)*298.15
+      s0(1) = 0.
+
+      call get_bi()
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2()
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      integer e,f,j1,j2,js1,jf1,jskip1,js2,jf2,jskip2,npts
+      real xavg,yavg
+
+ccc bottom boundary: post-shock inflow for x<1/6, reflecting wall beyond
+      do e=1,nelt
+      do f=1,2*ndim
+        if(cbc(f,e,1).eq.'SYM') then
+           call facind2(js1,jf1,jskip1,js2,jf2,jskip2,f)
+           xavg = 0.
+           yavg = 0.
+           npts = 0
+           do j2=js2,jf2,jskip2
+           do j1=js1,jf1,jskip1
+             xavg = xavg+xm1(j1,j2,1,e)
+             yavg = yavg+ym1(j1,j2,1,e)
+             npts = npts+1
+           enddo
+           enddo
+           xavg = xavg/npts
+           yavg = yavg/npts
+           if(yavg.lt.0.5.and.xavg.lt.XWALL) cbc(f,e,1) = 'V  '
+        endif
+      enddo
+      enddo
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      ifflow = .false.      ! required for Nek interface
+      ifheat = .true.       ! required for Nek interface
+      ifdg   = .true.       ! required for Nek interface
+
+      ifviscous    = .false. ! viscous terms
+      ifforces     = .false. ! user forces / chemistry
+      ifavisc      = .true.  ! artificial viscosity (entropy viscosity)
+      ifsplitchem  = .false. ! Strang splitting
+      ifclip       = .false. ! clip mass fractions/temp
+      if1D         = .false. ! force 1D
+      ifpplim      = .true.  ! positivity-preserving limiter
+      ifIntLLFfull = .false. ! full LLF in interface term
+      ifVolEC      = .false. ! EC volume terms
+
+      return
+      end
+c---------------------------------------------------------------------
