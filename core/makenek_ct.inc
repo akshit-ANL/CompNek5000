@@ -51,6 +51,12 @@ function build_3rdparty() {
   fi
   cd $CASEDIR
 
+  if [ $P4EST -ne 0 ]; then
+     cd $SOURCE_ROOT_P4EST
+     CFLAGS="-O2 $CFLAGS" ./install 2>&1 | tee -a $CASEDIR/build.log >/dev/null
+  fi
+  cd $CASEDIR
+
   printf "done\n"
   set +o pipefail
 }
@@ -74,6 +80,8 @@ function clean_3rdparty() {
   cd $SOURCE_ROOT_CVODE; ./install $act 2>/dev/null
   cd $CASEDIR
   cd $SOURCE_ROOT_HYPRE; ./install $act 2>/dev/null
+  cd $CASEDIR
+  cd $SOURCE_ROOT_P4EST; ./install $act 2>/dev/null
   cd $CASEDIR
 }
 
@@ -103,6 +111,7 @@ if [ "$1" == "-h" ] || [ "$1" == "-help" ] || [ "$PPLIST" == "?" ]; then
   echo "  XSMM          use libxsmm for mxm"
   echo "  CVODE         enable CVODE support"
   echo "  HYPRE         enable HYPRE support"
+  echo "  P4EST         enable p4est (AMR forest) support"
   echo "  VENDOR_BLAS   use VENDOR BLAS/LAPACK"
   echo "  DPROCMAP      use distributed processor mapping"
   echo "  PARRSB        use online RSB partitioner"
@@ -134,6 +143,8 @@ SOURCE_ROOT_CVODE="$NEK_SOURCE_ROOT/3rd_party/cvode"
 export SOURCE_ROOT_CVODE
 SOURCE_ROOT_HYPRE="$NEK_SOURCE_ROOT/3rd_party/hypre"
 export SOURCE_ROOT_HYPRE
+SOURCE_ROOT_P4EST="$NEK_SOURCE_ROOT/3rd_party/p4est"
+export SOURCE_ROOT_P4EST
 export NEK_DEPS_LOCAL_SRC
 
 NODEP=1
@@ -342,6 +353,7 @@ MPIIO=1
 PARRSB=0
 CVODE=0
 HYPRE=0
+P4EST=0
 MXM_USER="mxm_std.o"
 VENDOR_BLAS=0 
 
@@ -371,6 +383,11 @@ do
      HYPRE=1
      USR_LFLAGS+=" -L$SOURCE_ROOT_HYPRE/lib -lHYPRE"
      HYPRE_INC="$SOURCE_ROOT_HYPRE/include"
+   fi
+   if [ "$i" == "P4EST" ]; then
+     P4EST=1
+     USR_LFLAGS+=" -L$SOURCE_ROOT_P4EST/lib -lp4est -lsc -lm"
+     P4EST_INC="$SOURCE_ROOT_P4EST/include"
    fi
    if [ "$i" == "VENDOR_BLAS" ]; then
      VENDOR_BLAS=1
@@ -495,6 +512,14 @@ fi
 
 if [ $HYPRE -ne 0 ]; then
   sed -e "s:^HYPRE_IFLAGS[ ]*=.*:HYPRE_IFLAGS\:=-I${HYPRE_INC}:" \
+      -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \
+      .makefile > .makefile.tmp
+
+  mv .makefile.tmp .makefile
+fi
+
+if [ $P4EST -ne 0 ]; then
+  sed -e "s:^P4EST_IFLAGS[ ]*=.*:P4EST_IFLAGS\:=-I${P4EST_INC}:" \
       -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \
       .makefile > .makefile.tmp
 

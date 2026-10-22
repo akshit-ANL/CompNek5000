@@ -1,0 +1,65 @@
+[GENERAL]
+stopAt = endTime
+endTime = 0.2
+writeControl = runTime
+writeInterval = 0.05
+
+dt = 1.0e-4
+
+variableDT = no
+
+userparam02 = 1.0  # cstar
+userparam03 = 0.3  # cmax
+userparam04 = 0.7  # P
+
+userparam05 = 0    # interface flux: 0=LLF (original), 1=HLL, 2=HLLC, 3=HLLC/HLL blend
+userparam06 = 0.01 # blend: pressure-jump sensor below which pure HLLC is used
+userparam07 = 0.1  # blend: pressure-jump sensor above which pure HLL is used
+
+dealiasing = no
+
+writeDoublePrecision = no
+
+[PROBLEMTYPE]
+equation = incompNS
+
+[PRESSURE]
+residualTol = 1e-5
+residualProj = no
+
+[VELOCITY]
+residualTol = 1e-8
+density = 1.0
+viscosity = 1.0
+
+[TEMPERATURE] # rhoU
+rhocp = 1.0
+conductivity = 1.0
+
+[SCALAR01]    # rhoV
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR02]    # rhoW
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR03]    # rhoE
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR04]    # rho*Y (single species, Y=1)
+density = 1.0
+diffusivity = 1.0
+
+[SCALAR05]    # rho
+solver = none
+
+[SCALAR06]    # T
+solver = none
+
+[SCALAR07]    # nu
+solver = none
+
+[SCALAR08]    # s
+solver = none

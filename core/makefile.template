@@ -27,6 +27,7 @@ VISIT_LFLAGS=
 HYPRE_IFLAGS=
 GSLIB_IFLAGS=
 PARRSB_IFLAGS=
+P4EST_IFLAGS=
 
 ################################################################################
 

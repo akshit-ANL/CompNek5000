@@ -516,6 +516,14 @@ if [ $HYPRE -ne 0 ]; then
   mv .makefile.tmp .makefile
 fi
 
+if [ $P4EST -ne 0 ]; then
+  sed -e "s:^P4EST_IFLAGS[ ]*=.*:P4EST_IFLAGS\:=-I${P4EST_INC}:" \
+      -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \
+      .makefile > .makefile.tmp
+
+  mv .makefile.tmp .makefile
+fi
+
 if [ $PARRSB -ne 0 ]; then
   sed -e "s:^PARRSB_IFLAGS[ ]*=.*:PARRSB_IFLAGS\:=-I${PARRSB_INC}:" \
       -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \

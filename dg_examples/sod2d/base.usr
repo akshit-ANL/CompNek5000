@@ -1,0 +1,223 @@
+c-----------------------------------------------------------------------
+c     Sod shock tube (Sod 1978), quasi-1D in a thin 2D strip.
+c     x in [0,1], diaphragm at x=0.5, gamma=1.4, t_end=0.2
+c       left : rho=1     u=0 p=1
+c       right: rho=0.125 u=0 p=0.1
+c     All boundaries are slip walls; waves do not reach the ends by t=0.2.
+c     Calorically perfect gas, single species, no Cantera (R=1).
+c     At the last step each rank writes prof_<rank>.dat with columns
+c     x y rho u p; compare with exact_sod.py.
+c-----------------------------------------------------------------------
+#define GAMMA 1.4
+#define XDIAPH 0.5
+c-----------------------------------------------------------------------
+      subroutine sod_state(x,rho,ux,pp)
+      implicit none
+      real x,rho,ux,pp
+      if(x.lt.XDIAPH) then
+         rho = 1.0
+         pp  = 1.0
+      else
+         rho = 0.125
+         pp  = 0.1
+      endif
+      ux = 0.
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine uservp(ix,iy,iz,eg)
+      integer ix,iy,iz,eg
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      udiff  = 0.0
+      utrans = 0.0
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userf(ix,iy,iz,eg)
+      integer ix,iy,iz,eg
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      ffx = 0.0
+      ffy = 0.0
+      ffz = 0.0
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userq(ix,iy,iz,eg)
+      integer ix,iy,iz,eg
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      qvol   = 0.0
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine userbc(ix,iy,iz,iside,eg)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      integer ix,iy,iz,iside,eg
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userbc_comp(x,y,z,bID,cb,ux,uy,uz,pp,temp,yy)
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+      real pp,temp,yy(nspec)
+      integer bID
+      real x,y,z
+      real ux,uy,uz
+      character cb*3
+      return
+      end
+c---------------------------------------------------------------------
+      subroutine useric(ix,iy,iz,eg)
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      include 'COMPRESS'
+
+      integer ix,iy,iz,eg
+
+      real yic(nspec)
+      real intE,totE,kinE,uii
+      real vxic,pric,rhoic,tmpic
+      integer e,b,c,j
+
+      e = gllel(eg)
+
+      call sod_state(x,rhoic,vxic,pric)
+      yic(1) = 1.0
+      tmpic = pric/(rhoic*R_u/mw(1))
+
+      intE = 0.
+      do b=1,nspec
+        j = (b-1)*(npa+1)
+        uii = 0.
+        do c=1,npa+1
+          uii = uii + bi(j+c)*tmpic**(c-1)
+        enddo
+        intE = intE + yic(b)*uii
+      enddo
+      kinE = 0.5*vxic**2
+      totE = intE+kinE
+
+      if(ifield.eq.(U_EQ+1))then       ! rhoU
+         temp = rhoic*vxic
+      elseif(ifield.eq.(V_EQ+1))then   ! rhoV
+         temp = 0.
+      elseif(ifield.eq.(W_EQ+1))then   ! rhoW
+         temp = 0.
+      elseif(ifield.eq.(E_EQ+1))then   ! rhoE
+         temp = rhoic*totE
+      elseif(ifield.ge.(E_EQ+2))then   ! rho*Y_i
+         temp = rhoic*yic(ifield-E_EQ-1)
+      endif
+
+      vtrans(ix,iy,iz,e,1) = rhoic
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userchk()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      integer n,i
+      character*16 fname
+
+      n = nx1*ny1*nz1*nelt
+
+ccc run compressible step
+      call runcompdg
+
+ccc output fields: rho, T, AV coefficient, entropy
+      if(ifoutfld) then
+         do i=1,n
+           t(i,1,1,1,5) = vtrans(i,1,1,1,1)
+           t(i,1,1,1,6) = temp1(i,1,1,1)
+           t(i,1,1,1,7) = enmu(i,1,1,1)
+           t(i,1,1,1,8) = ss(i,1,1,1)-s0min
+         enddo
+      endif
+
+ccc final profile for comparison with the exact solution
+      if(lastep.eq.1) then
+         write(fname,'(a5,i5.5,a4)') 'prof_',nid,'.dat'
+         open(unit=71,file=fname,status='replace')
+         do i=1,n
+           write(71,'(5es16.8)') xm1(i,1,1,1),ym1(i,1,1,1)
+     $          ,vtrans(i,1,1,1,1),vx(i,1,1,1),pr(i,1,1,1)
+         enddo
+         close(71)
+      endif
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine userqtl
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      integer c
+
+ccc perfect gas, R=1: mw=R_u so that R_u/mw=1
+      mw(1) = R_u
+
+ccc cp = gamma/(gamma-1)*R as the constant NASA-7 coefficient
+      do c=1,npa
+        aa(c) = 0.
+      enddo
+      aa(1) = GAMMA/(GAMMA-1.)*R_u/mw(1)
+
+ccc zero internal energy at T=0: bi(1)=h0-sum(aa*298.15^c/c)=0
+      h0(1) = aa(1)*298.15
+      s0(1) = 0.
+
+      call get_bi()
+
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat2()
+      include 'SIZE'
+      include 'TOTAL'
+      return
+      end
+c-----------------------------------------------------------------------
+      subroutine usrdat3()
+
+      include 'SIZE'
+      include 'TOTAL'
+      include 'COMPRESS'
+
+      ifflow = .false.      ! required for Nek interface
+      ifheat = .true.       ! required for Nek interface
+      ifdg   = .true.       ! required for Nek interface
+
+      ifviscous    = .false. ! viscous terms
+      ifforces     = .false. ! user forces / chemistry
+      ifavisc      = .true.  ! artificial viscosity (entropy viscosity)
+      ifsplitchem  = .false. ! Strang splitting
+      ifclip       = .false. ! clip mass fractions/temp
+      if1D         = .false. ! force 1D
+      ifpplim      = .true.  ! positivity-preserving limiter
+      ifIntLLFfull = .false. ! full LLF in interface term
+      ifVolEC      = .false. ! EC volume terms
+
+      return
+      end
+c---------------------------------------------------------------------
