@@ -3,6 +3,24 @@
 Status: the forest/neighbor layer is written and tested standalone. It is not
 yet connected to the Nek data structures, so no solver run uses it.
 
+## Quick start on the HPC (gcc + OpenMPI)
+
+Nothing here has been run on a cluster yet; this is the intended first session.
+
+    git clone <fork-url> && cd CompNek5000 && git checkout amr
+    export NEK_SOURCE_ROOT=$PWD
+    # 1. build p4est (downloads p4est 2.8.6; compute nodes may lack internet,
+    #    so run on a login node, or use: cd 3rd_party/p4est && ./install fetch)
+    cd 3rd_party/p4est && CC=mpicc ./install && cd ../..
+    # 2. standalone AMR test (see "Build the test" below), 2D and 3D
+    # 3. baseline solver cases, no AMR yet:
+    #    dg_examples/sod2d  (Cantera-free; README there)
+    #    dg_examples/dmr2d  (Cantera-free double Mach reflection)
+    #    userparam05 in base.par selects LLF / HLL / HLLC / blend
+
+Other branches: `riemann-solvers` (HLL/HLLC/blend, already in `amr`) and
+`master` (adds `dmr2d`).
+
 ## Files
 
 | file | role |
