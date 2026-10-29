@@ -83,10 +83,12 @@ function config_nek() {
 : ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
 : ${FC:="mpif77"}
 : ${CC:="mpicc"}
+: ${CXX:="mpicxx"}
 : ${LD:=$FC}
 : ${MPI:=1}
 : ${PROFILING:=1}
 : ${VISIT:=0}
+: ${CATALYST2:=0}
 : ${PPLIST:=""}
 : ${NEK_DEPS_LOCAL_SRC:=0}
 
@@ -446,6 +448,7 @@ rm -rf makefile 2>/dev/null
 
 sed -e "s:^FC[ ]*=.*:FC=$FC:" \
 -e "s:^CC[ ]*=.*:CC=$CC:" \
+-e "s:^CXX[ ]*=.*:CXX=$CXX:" \
 -e "s:^LD[ ]*=.*:LD=$LD:" \
 -e "s:^OPT_INCDIR[ ]*=.*:OPT_INCDIR=$OPT_INCDIR:" \
 -e "s:^FFLAGS[ ]*+=.*:FFLAGS+=$FCPP $FR8 $FF77 $FFLAGS:" \
@@ -459,10 +462,26 @@ sed -e "s:^FC[ ]*=.*:FC=$FC:" \
 -e "s/^CVODE[ ]*=.*/CVODE=$CVODE/" \
 -e "s:^GSLIB_IFLAGS[ ]*=.*:GSLIB_IFLAGS\:=${GSLIB_IFLAGS}:" \
 -e "s/^VISIT[ ]*=.*/VISIT=${VISIT}/" \
+-e "s/^CATALYST2[ ]*=.*/CATALYST2=${CATALYST2}/" \
+-e "s:^CATALYST2_CXXFLAGS[ ]*=.*:CATALYST2_CXXFLAGS=${CATALYST2_CXXFLAGS}:" \
+-e "s:^CATALYST2_LIBS[ ]*=.*:CATALYST2_LIBS=${CATALYST2_LIBS}:" \
 -e "s:^USR[ ]*=.*:USR=$USR:" \
 -e "s:^USR_LFLAGS[ ]*=.*:USR_LFLAGS=$USR_LFLAGS:" \
 -e "s:^S[ ]*=.*:S=${NEK_SOURCE_ROOT}:" \
 $NEK_SOURCE_ROOT/core/makefile.template >.makefile
+
+if [ $CATALYST2 -ne 0 ]; then
+  if [ $VISIT -ne 0 ]; then
+    echo "FATAL ERROR: CATALYST2 and VISIT cannot be enabled together"
+    return 11
+  fi
+  if [ -z "$CATALYST2_CXXFLAGS" ] || [ -z "$CATALYST2_LIBS" ]; then
+    echo "FATAL ERROR: CATALYST2_CXXFLAGS and CATALYST2_LIBS are required"
+    return 11
+  fi
+  sed -e "s/^PPS[ ]*=.*/PPS=${PPLIST} CATALYST2/" .makefile > .makefile.tmp
+  mv .makefile.tmp .makefile
+fi
 
 if [ $VISIT -ne 0 ]; then
   echo ""

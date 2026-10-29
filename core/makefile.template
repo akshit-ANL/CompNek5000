@@ -9,6 +9,7 @@ LIB=$(OBJDIR)/libnek5000.a
 LD=
 FC=
 CC=
+CXX=
 FFLAGS+=
 CFLAGS+=
 LDFLAGS+=
@@ -21,9 +22,12 @@ USR_LFLAGS=
 
 MPI=0 
 VISIT=0
+CATALYST2=0
 
 VISIT_IFLAGS=
 VISIT_LFLAGS=
+CATALYST2_CXXFLAGS=
+CATALYST2_LIBS=
 HYPRE_IFLAGS=
 GSLIB_IFLAGS=
 PARRSB_IFLAGS=
@@ -78,13 +82,18 @@ ifneq ($(VISIT),0)
   USR_LFLAGS := ${USR_LFLAGS} $(VISIT_LFLAGS)
 endif
 
+ifneq ($(CATALYST2),0)
+  CATALYST2O := nek_catalyst2.o
+  USR_LFLAGS := ${USR_LFLAGS} $(CATALYST2_LIBS)
+endif
+
 ifeq ($(MPI),0)
 	DUMMY:= $(shell cp $S/core/mpi_dummy.h $S/core/mpif.h) 
 else
 	DUMMY:= $(shell rm -rf $S/core/mpif.h) 
 endif
 
-TMP1 = $(CORE) $(MXM) $(USR) $(COMM_MPI) $(VISITO)
+TMP1 = $(CORE) $(MXM) $(USR) $(COMM_MPI) $(VISITO) $(CATALYST2O)
 
 INCLUDES_DIR += $(OPT_INCDIR)
 INCLUDES_DIR += $(S)/core/experimental
@@ -235,6 +244,7 @@ $(OBJDIR)/nekio.o          :$S/core/nekio.c;           $(CC) -c $(cFL2) $(GSLIB_
 # 3rd party #######################################################################################
 $(OBJDIR)/visit.o        :$S/core/3rd_party/visit.f;	     $(FC) -c $(VISIT_IFLAGS) $(FL2) $< -o $@
 $(OBJDIR)/nek_in_situ.o  :$S/core/3rd_party/nek_in_situ.f;   $(FC) -c $(VISIT_IFLAGS) $(FL2) $< -o $@
+$(OBJDIR)/nek_catalyst2.o :$S/core/3rd_party/nek_catalyst2.cxx; $(CXX) -std=c++11 -c $(CATALYST2_CXXFLAGS) $(cFL2) $< -o $@
 $(OBJDIR)/finiparser.o   :$S/core/3rd_party/finiparser.c;    $(CC) -c $(cFL2) $(JL) $< -o $@
 $(OBJDIR)/iniparser.o    :$S/core/3rd_party/iniparser.c;     $(CC) -c $(cFL2) $(JL) $< -o $@
 $(OBJDIR)/dictionary.o   :$S/core/3rd_party/dictionary.c;    $(CC) -c $(cFL2) $(JL) $< -o $@
