@@ -3,11 +3,19 @@ c     HLL / HLLC interface fluxes, and a blend of the two.
 c
 c     Selected with userparam05 (default 0 = original LLF path):
 c        1 = HLL      2 = HLLC      3 = HLLC blended into HLL
-c     Blend (3): alpha = clamp((s-sw0)/(sw1-sw0),0,1), F = alpha*F_HLL
+c     Blend (3): alpha = clamp((s_p-sw0)/(sw1-sw0),0,1), F = alpha*F_HLL
 c     + (1-alpha)*F_HLLC, with the face pressure-jump sensor
-c     s = |p_r-p_l|/(p_r+p_l). sw0, sw1 are userparam06, userparam07
-c     (defaults 0.01 and 0.1). alpha is a function of the two face
-c     states only, so both elements see the same flux (conservative).
+c     s_p = |p_r-p_l|/(p_r+p_l). sw0, sw1 are userparam06, userparam07
+c     (defaults 0.01 and 0.1). alpha is further gated by two guards:
+c       (a) Mach gate: alpha=0 if either side is subsonic (preserves HLLC
+c           at flame fronts, contacts, and pre-shock stratified layers)
+c       (b) Density contact sensor: alpha *= max(0,1-s_rho/sw_rho) where
+c           s_rho = |rho_r-rho_l|/(rho_r+rho_l), sw_rho = userparam08
+c           (default 0.1). Suppresses HLL at sharp density interfaces so
+c           HLLC can preserve stratified fuel/air contacts even when a
+c           shock drives a large pressure jump at that face.
+c     alpha is a function of the two face states only, so both elements
+c     see the same flux (conservative).
 c
 c     State vector order is the solver's: (rhoU,rhoV,rhoW,rhoE,rhoYi).
 c     Mass is carried by the species equations (rho = sum rhoYi).
@@ -25,17 +33,19 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
       real rkRHS(lx1,ly1,lz1,lelt,N_EQ)
 
       integer e,iface,i,k,b,ieq,ig,ifl
-      real sw0,sw1,xn,yn,zn
+      real sw0,sw1,sw_rho,xn,yn,zn
       real rho_l,u_l,v_l,w_l,p_l,e_l,g_l,y_l(nspec)
       real rho_r,u_r,v_r,w_r,p_r,e_r,g_r,y_r(nspec)
       real fsn(N_EQ),fln(N_EQ)
       real un_l,un_r,hfac
 
-      ifl = nint(uparam(5))
-      sw0  = uparam(6)
-      sw1  = uparam(7)
-      if(sw0.le.0.) sw0 = 0.01
-      if(sw1.le.sw0) sw1 = 10.*sw0
+      ifl    = nint(uparam(5))
+      sw0    = uparam(6)
+      sw1    = uparam(7)
+      sw_rho = uparam(8)
+      if(sw0.le.0.)    sw0    = 0.01
+      if(sw1.le.sw0)   sw1    = 10.*sw0
+      if(sw_rho.le.0.) sw_rho = 0.1
 
       k = 0
       do e=1,nelt
@@ -72,7 +82,7 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
            y_r(b) = Yipi(k,b)-Yif(k,b)
          enddo
 
-         call riemann_flux(fsn,ifl,sw0,sw1,xn,yn,zn
+         call riemann_flux(fsn,ifl,sw0,sw1,sw_rho,xn,yn,zn
      &        ,rho_l,u_l,v_l,w_l,p_l,e_l,g_l,y_l
      &        ,rho_r,u_r,v_r,w_r,p_r,e_r,g_r,y_r)
 
@@ -99,7 +109,7 @@ ccc physical normal flux of the interior state
       return
       end
 c---------------------------------------------------------------------
-      subroutine riemann_flux(fsn,ifl,sw0,sw1,xn,yn,zn
+      subroutine riemann_flux(fsn,ifl,sw0,sw1,sw_rho,xn,yn,zn
      &     ,rho_l,u_l,v_l,w_l,p_l,e_l,g_l,y_l
      &     ,rho_r,u_r,v_r,w_r,p_r,e_r,g_r,y_r)
 
@@ -111,12 +121,12 @@ ccc left state L to the right state R. e* is total energy per volume.
 
       real fsn(N_EQ)
       integer ifl
-      real sw0,sw1,xn,yn,zn
+      real sw0,sw1,sw_rho,xn,yn,zn
       real rho_l,u_l,v_l,w_l,p_l,e_l,g_l,y_l(nspec)
       real rho_r,u_r,v_r,w_r,p_r,e_r,g_r,y_r(nspec)
 
       real fhll(N_EQ),fhllc(N_EQ)
-      real un_l,un_r,a_l,a_r,s_l,s_r,s,alpha
+      real un_l,un_r,a_l,a_r,s_l,s_r,s_p,s_rho,alpha
       integer b
 
       un_l = u_l*xn+v_l*yn+w_l*zn
@@ -132,8 +142,16 @@ ccc Davis wave speed estimates
       if(ifl.eq.1) then
          alpha = 1.
       elseif(ifl.eq.3) then
-         s     = abs(p_r-p_l)/(p_r+p_l)
-         alpha = min(1.,max(0.,(s-sw0)/(sw1-sw0)))
+ccc pressure-jump sensor
+         s_p   = abs(p_r-p_l)/(p_r+p_l)
+         alpha = min(1.,max(0.,(s_p-sw0)/(sw1-sw0)))
+ccc Mach gate: keep HLLC (alpha=0) if either side is subsonic
+         if(abs(un_l)/a_l.lt.1..or.abs(un_r)/a_r.lt.1.) alpha = 0.
+ccc density contact sensor: suppress HLL at sharp density interfaces
+         if(alpha.gt.0.) then
+            s_rho = abs(rho_r-rho_l)/(rho_r+rho_l)
+            alpha = alpha*max(0.,1.-s_rho/sw_rho)
+         endif
       endif
 
       if(alpha.gt.0.) then
