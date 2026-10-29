@@ -145,10 +145,11 @@ ccc Davis wave speed estimates
 ccc pressure-jump sensor
          s_p   = abs(p_r-p_l)/(p_r+p_l)
          alpha = min(1.,max(0.,(s_p-sw0)/(sw1-sw0)))
-ccc Mach gate: keep HLLC (alpha=0) if either side is subsonic
-         if(abs(un_l)/a_l.lt.1..or.abs(un_r)/a_r.lt.1.) alpha = 0.
-ccc density contact sensor: suppress HLL at sharp density interfaces
-         if(alpha.gt.0.) then
+ccc Mach gate: keep HLLC if either side is subsonic; at subsonic faces
+ccc also apply density contact sensor to protect stratified interfaces.
+ccc Supersonic faces skip the density sensor — the density jump there
+ccc is the shock itself, not a contact, and HLL is needed for stability.
+         if(abs(un_l)/a_l.lt.1..or.abs(un_r)/a_r.lt.1.) then
             s_rho = abs(rho_r-rho_l)/(rho_r+rho_l)
             alpha = alpha*max(0.,1.-s_rho/sw_rho)
          endif
