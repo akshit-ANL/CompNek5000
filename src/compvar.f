@@ -34,6 +34,16 @@ ccc density
            vtrans(i,1,1,1,1) = vtrans(i,1,1,1,1) + rkU(i,1,1,1,E_EQ+b)
         enddo
 
+ccc DEBUG: catch non-positive density before any division
+        if(vtrans(i,1,1,1,1).le.0..and.nid.eq.0) then
+          write(*,'(A,I8,A,ES12.4)') '[compvar] neg rho at pt ',i,
+     &      ' rho=',vtrans(i,1,1,1,1)
+          do b=1,nspec
+            write(*,'(A,I3,A,ES12.4)') '  rhoY(',b,')=',
+     &        rkU(i,1,1,1,E_EQ+b)
+          enddo
+        endif
+
 ccc clip and re-scale species
         if(ifclip) then
            ysum = 0.
