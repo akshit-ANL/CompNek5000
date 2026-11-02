@@ -34,16 +34,6 @@ ccc density
            vtrans(i,1,1,1,1) = vtrans(i,1,1,1,1) + rkU(i,1,1,1,E_EQ+b)
         enddo
 
-ccc DEBUG: catch non-positive density before any division
-        if(vtrans(i,1,1,1,1).le.0.) then
-          write(*,'(A,I4,A,I8,A,ES12.4)') '[compvar] neg rho rank',
-     &      nid,' pt ',i,' rho=',vtrans(i,1,1,1,1)
-          do b=1,nspec
-            write(*,'(A,I3,A,ES12.4)') '  rhoY(',b,')=',
-     &        rkU(i,1,1,1,E_EQ+b)
-          enddo
-        endif
-
 ccc clip and re-scale species
         if(ifclip) then
            ysum = 0.
@@ -86,14 +76,12 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
-ccc Internal energy floor: if intE < 0 the pressure would be negative.
-ccc Reset rhoE so intE = small positive value (T ~ 100 K floor).
-ccc This is equivalent to a pressure floor and prevents Newton divergence.
+ccc Internal energy floor: HLLC energy flux can drive intE < 0 at sharp
+ccc interfaces (p < 0). Reset rhoE to a ~100 K floor to prevent Newton
+ccc divergence and Cantera receiving negative density.
         if(uu(i,1,1,1).lt.0.) then
-          uu(i,1,1,1) = 1.e3  ! ~100 K floor for air-like mixture [J/kg]
+          uu(i,1,1,1) = 1.e3
           rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
-          if(nid.eq.0) write(*,'(A,I8,A,ES12.4)')
-     &      '[compvar] intE floor at pt ',i,' kinE=',kinE
         endif
 
 ccc Newton's method for T

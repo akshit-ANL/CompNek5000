@@ -250,11 +250,8 @@ ccc rho
              rho1_avg = rho1_avg + qavg(E_EQ+b)
            enddo
            if(rho1_avg.le.eps2) then
-ccc element-average density is itself non-positive: cannot rescale,
-ccc just zero out all species in this element (catastrophic failure guard)
-             if(nid.eq.0) write(*,'(A,I6,A,ES12.4,A,ES12.4)')
-     &         '[pp_lim] elem ',e,' rho_avg=',rho1_avg,
-     &         ' rho_min=',rho1_min
+ccc element-average density is itself non-positive: clamp species to
+ccc zero rather than rescaling with a bad thetak
              do b=1,nspec
                do i=1,nxyz
                  QQ(i,1,1,e,E_EQ+b) = max(0.,QQ(i,1,1,e,E_EQ+b))
