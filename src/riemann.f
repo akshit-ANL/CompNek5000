@@ -86,8 +86,8 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
          g_r   = gampi(k)-gamf(k)
 
          do b=1,nspec
-           y_l(b) = Yif(k,b)
-           y_r(b) = Yipi(k,b)-Yif(k,b)
+           y_l(b) = max(0.,Yif(k,b))
+           y_r(b) = max(0.,Yipi(k,b)-Yif(k,b))
          enddo
 
          call riemann_flux(fsn,ifl,sw0,sw1,sw_rho,xn,yn,zn
