@@ -10,8 +10,12 @@ c---------------------------------------------------------------------
       
       real dtf
       
-      integer i,ntot
+      integer i,ntot,kk
+      integer ndbg(5),nglob(5),iglsum
+      common /PPDBG/ ndbg
       ntot  = nx1*ny1*nz1*nelt
+
+      call izero(ndbg,5)
 
       if(istep.eq.1) call eval_dependent_vars(t)
       call copy(rhoS2,rhoS1,ntot)   
@@ -89,6 +93,13 @@ ccc stage 3
 
 ccc update variables
       call eval_dependent_vars(t)
+
+ccc DEBUG counters (element/node counts summed over stages and ranks)
+      do kk=1,5
+        nglob(kk) = iglsum(ndbg(kk),1)
+      enddo
+      if(nid.eq.0) write(*,'(A,I8,A,5I9)') '[ppdbg] step',istep,
+     &  ' Tfloor,rho,rhoY,rU,rS:',(nglob(kk),kk=1,5)
 
       return
       end
@@ -207,6 +218,8 @@ c---------------------------------------------------------------------
       real vlsc2
       integer n,nxyz
       integer i,e,b
+      integer ndbg(5)
+      common /PPDBG/ ndbg
 
       nxyz = lx1*ly1*lz1
       n = nx1*ny1*nz1*nelt 
@@ -242,6 +255,7 @@ ccc rho
 
         ! modify species
         if(rho1_min.lt.eps2) then
+           ndbg(2) = ndbg(2)+1
            rho1_avg = 0.
            do b=1,nspec
              qavg(E_EQ+b) =
@@ -288,6 +302,7 @@ ccc rho*Y_i
           
           ! modify conservative variables
           if(rhoY_min.lt.0.) then
+             ndbg(3) = ndbg(3)+1
              qavg(E_EQ+b) =
      &            vlsc2(QQ(1,1,1,e,E_EQ+b),bm1(1,1,1,e),nxyz)/volel(e)        
              thetak = qavg(E_EQ+b)/(qavg(E_EQ+b)-rhoY_min)
@@ -318,6 +333,7 @@ ccc rho*u_shift
 
         ! modify conservative variables
         if(rU_min.lt.eps2) then
+           ndbg(4) = ndbg(4)+1
            do b=1,N_EQ
              qavg(b) = vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e) ! average of conserved variables in the element
            enddo
@@ -354,6 +370,7 @@ ccc rho*s_shift
 
         ! modify conservative variables
         if(rS_min.lt.0.) then
+           ndbg(5) = ndbg(5)+1
            do b=1,N_EQ
              qavg(b) = vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e) ! average of conserved variables in the element
            enddo

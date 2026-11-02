@@ -24,6 +24,9 @@ c---------------------------------------------------------------------
       save icalld
       data icalld /0/
 
+      integer ndbg(5)
+      common /PPDBG/ ndbg
+
       n = nx1*ny1*nz1*nelt
 
       do i=1,n
@@ -88,6 +91,7 @@ ccc products; floor against u(T_floor) instead, which keeps T>0 and p>0.
           enddo
         enddo
         if(uu(i,1,1,1).lt.ufloor) then
+          ndbg(1) = ndbg(1)+1
           uu(i,1,1,1) = ufloor
           rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
         endif
