@@ -76,6 +76,13 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
+ccc Internal energy floor: HLLC/DG face overshoot can drive intE < 0.
+ccc Any uu < 0 would give p < 0 -> Newton divergence -> Cantera NaN.
+ccc Floor to zero; the temperature clip at 298 K below corrects T and p.
+        if(uu(i,1,1,1).lt.0.) then
+          uu(i,1,1,1) = 0.
+          rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
+        endif
 
 ccc Newton's method for T
         new_max = 1000
