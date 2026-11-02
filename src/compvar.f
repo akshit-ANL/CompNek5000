@@ -76,11 +76,19 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
-ccc Internal energy floor: HLLC/DG face overshoot can drive intE < 0.
-ccc Any uu < 0 would give p < 0 -> Newton divergence -> Cantera NaN.
-ccc Floor to zero; the temperature clip at 298 K below corrects T and p.
-        if(uu(i,1,1,1).lt.0.) then
-          uu(i,1,1,1) = 0.
+ccc Temperature floor in energy space (active even when ifclip is off).
+ccc uu is absolute (includes formation enthalpy) so uu<0 is valid for
+ccc products; floor against u(T_floor) instead, which keeps T>0 and p>0.
+        tfloor = 200.
+        ufloor = 0.
+        do b=1,nspec
+          j = (b-1)*(npa+1)
+          do c=1,npa+1
+            ufloor = ufloor + yy(b)*bi(j+c)*tfloor**(c-1)
+          enddo
+        enddo
+        if(uu(i,1,1,1).lt.ufloor) then
+          uu(i,1,1,1) = ufloor
           rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
         endif
 

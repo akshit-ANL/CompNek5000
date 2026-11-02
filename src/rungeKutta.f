@@ -322,7 +322,12 @@ ccc rho*u_shift
              qavg(b) = vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e) ! average of conserved variables in the element
            enddo
            call eval_rU_shift(qavg,rU_shift) ! rU_shift based on avg conserved variables
-           thetak = (rU_shift-eps2)/(rU_shift-rU_min)          
+           if(rU_shift.le.eps2) then
+             thetak = 0.  ! inadmissible average: scaling cannot fix it, flatten to average
+           else
+             thetak = (rU_shift-eps2)/(rU_shift-rU_min)
+             thetak = min(max(thetak,0.),1.)
+           endif
            do b=1,N_EQ
              do i=1,nxyz
                QQ(i,1,1,e,b) = qavg(b)+thetak*(QQ(i,1,1,e,b)-qavg(b)) ! rescale solution
