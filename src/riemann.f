@@ -325,6 +325,26 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
         f(b) = fK(b)+sK*(qs(b)-qK(b))
       enddo
 
+ccc Species positivity fix (Billet & Abgrall 2003):
+ccc The HLLC star-state correction can drive rho*Y_i < 0 at sharp
+ccc composition interfaces (e.g. stratified fuel/air). For each species,
+ccc if the HLLC flux would extract more than the donor-cell upwind flux,
+ccc fall back to the upwind physical flux for that species only.
+ccc Momentum and energy fluxes are unchanged — conservative overall.
+      do b=1,nspec
+        if(sM.ge.0.) then
+ccc left cell is donor: upwind species flux is rho_l*Y_l*un_l
+          if(f(E_EQ+b).lt.min(0.,fK(E_EQ+b))) then
+            f(E_EQ+b) = fK(E_EQ+b)
+          endif
+        else
+ccc right cell is donor: upwind species flux is rho_r*Y_r*un_r
+          if(f(E_EQ+b).gt.max(0.,fK(E_EQ+b))) then
+            f(E_EQ+b) = fK(E_EQ+b)
+          endif
+        endif
+      enddo
+
       return
       end
 c---------------------------------------------------------------------
