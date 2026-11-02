@@ -39,6 +39,10 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
       real fsn(N_EQ),fln(N_EQ)
       real un_l,un_r,hfac
 
+      integer dbg_nclamp
+      real    dbg_worst_pre,dbg_worst_post
+      common /RIEMANN_DBG/ dbg_nclamp,dbg_worst_pre,dbg_worst_post
+
       ifl    = nint(uparam(5))
       sw0    = uparam(6)
       sw1    = uparam(7)
@@ -46,6 +50,10 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
       if(sw0.le.0.)    sw0    = 0.01
       if(sw1.le.sw0)   sw1    = 10.*sw0
       if(sw_rho.le.0.) sw_rho = 0.1
+
+      dbg_nclamp     = 0
+      dbg_worst_pre  = 0.
+      dbg_worst_post = 0.
 
       k = 0
       do e=1,nelt
@@ -105,6 +113,14 @@ ccc physical normal flux of the interior state
         enddo
        enddo
       enddo
+
+ccc DEBUG: report positivity clamp activity this RK substep (rank 0 only)
+      if(nid.eq.0) then
+        write(*,'(A,I8,A,ES12.4,A,ES12.4)')
+     &    '[HLLC posfix] clamps=',dbg_nclamp,
+     &    '  worst_pre=',dbg_worst_pre,
+     &    '  worst_post=',dbg_worst_post
+      endif
 
       return
       end
@@ -267,7 +283,12 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
 
       real fK(N_EQ),qK(N_EQ),qs(N_EQ)
       real un_l,un_r,sM,sK,fac,rhoK,uK,vK,wK,pK,eK,unK,yK(nspec)
+      real f_pre,f_post
       integer b
+
+      integer dbg_nclamp
+      real    dbg_worst_pre,dbg_worst_post
+      common /RIEMANN_DBG/ dbg_nclamp,dbg_worst_pre,dbg_worst_post
 
       un_l = u_l*xn+v_l*yn+w_l*zn
       un_r = u_r*xn+v_r*yn+w_r*zn
@@ -333,8 +354,17 @@ ccc relative to the upwind donor-cell flux fK = rhoK*yK(b)*unK,
 ccc and cannot exceed fK in magnitude.
 ccc Momentum and energy fluxes are unchanged — conservative overall.
       do b=1,nspec
-        f(E_EQ+b) = max(min(0.,fK(E_EQ+b)),
-     &              min(max(0.,fK(E_EQ+b)), f(E_EQ+b)))
+        f_pre  = f(E_EQ+b)
+        f_post = max(min(0.,fK(E_EQ+b)),
+     &           min(max(0.,fK(E_EQ+b)), f(E_EQ+b)))
+        if(f_post.ne.f_pre) then
+          dbg_nclamp = dbg_nclamp + 1
+          if(abs(f_pre).gt.abs(dbg_worst_pre)) then
+            dbg_worst_pre  = f_pre
+            dbg_worst_post = f_post
+          endif
+        endif
+        f(E_EQ+b) = f_post
       enddo
 
       return
