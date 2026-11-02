@@ -147,8 +147,19 @@ ccc left state L to the right state R. e* is total energy per volume.
 
       un_l = u_l*xn+v_l*yn+w_l*zn
       un_r = u_r*xn+v_r*yn+w_r*zn
-      a_l  = sqrt(g_l*p_l/rho_l)
-      a_r  = sqrt(g_r*p_r/rho_r)
+
+ccc DEBUG: trap bad states before sound speed (would produce NaN)
+      if(nid.eq.0) then
+        if(rho_l.le.0..or.p_l.le.0..or.rho_r.le.0..or.p_r.le.0.) then
+          write(*,'(A,4(A,ES12.4))')
+     &      '[riemann] bad state:',
+     &      ' rho_l=',rho_l,' p_l=',p_l,
+     &      ' rho_r=',rho_r,' p_r=',p_r
+        endif
+      endif
+
+      a_l  = sqrt(abs(g_l*p_l/rho_l))
+      a_r  = sqrt(abs(g_r*p_r/rho_r))
 
 ccc Davis wave speed estimates
       s_l = min(un_l-a_l,un_r-a_r)
