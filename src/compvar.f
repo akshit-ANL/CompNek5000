@@ -86,6 +86,16 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
+ccc Internal energy floor: if intE < 0 the pressure would be negative.
+ccc Reset rhoE so intE = small positive value (T ~ 100 K floor).
+ccc This is equivalent to a pressure floor and prevents Newton divergence.
+        if(uu(i,1,1,1).lt.0.) then
+          uu(i,1,1,1) = 1.e3  ! ~100 K floor for air-like mixture [J/kg]
+          rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
+          if(nid.eq.0) write(*,'(A,I8,A,ES12.4)')
+     &      '[compvar] intE floor at pt ',i,' kinE=',kinE
+        endif
+
 ccc Newton's method for T
         new_max = 1000
         new_tol = 1.e-8
