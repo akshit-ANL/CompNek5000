@@ -265,8 +265,9 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
       real rho_l,u_l,v_l,w_l,p_l,e_l,y_l(nspec)
       real rho_r,u_r,v_r,w_r,p_r,e_r,y_r(nspec)
 
-      real fK(N_EQ),qK(N_EQ),qs(N_EQ)
+      real fK(N_EQ),qK(N_EQ),qs(N_EQ),fhll(N_EQ)
       real un_l,un_r,sM,sK,fac,rhoK,uK,vK,wK,pK,eK,unK,yK(nspec)
+      real pstar
       integer b
 
       un_l = u_l*xn+v_l*yn+w_l*zn
@@ -312,6 +313,19 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
       call phys_flux(fK,xn,yn,zn,rhoK,uK,vK,wK,pK,eK,yK)
       call cons_state(qK,rhoK,uK,vK,wK,eK,yK)
 
+ccc HLLC star-state pressure: p* = pK + rhoK*(sK-unK)*(sM-unK)
+ccc If p* <= 0 the star state is unphysical (sharp composition interface
+ccc with large gamma/cv jump). Fall back to HLL which is positivity-
+ccc preserving by construction (Batten et al. 1997, eq. 3.6).
+      pstar = pK + rhoK*(sK-unK)*(sM-unK)
+      if(pstar.le.0.) then
+        call flux_hll(fhll,s_l,s_r,xn,yn,zn,
+     &    rho_l,u_l,v_l,w_l,p_l,e_l,y_l,
+     &    rho_r,u_r,v_r,w_r,p_r,e_r,y_r)
+        call copy(f,fhll,N_EQ)
+        return
+      endif
+
       fac = rhoK*(sK-unK)/(sK-sM)
       qs(U_EQ) = fac*(uK+(sM-unK)*xn)
       qs(V_EQ) = fac*(vK+(sM-unK)*yn)
@@ -326,12 +340,8 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
       enddo
 
 ccc Species positivity fix (Billet & Abgrall 2003):
-ccc The HLLC star-state correction can drive rho*Y_i < 0 at sharp
-ccc composition interfaces (e.g. stratified fuel/air). Clamp each
-ccc species flux to [min(0,fK), max(0,fK)]: it cannot flip sign
-ccc relative to the upwind donor-cell flux fK = rhoK*yK(b)*unK,
-ccc and cannot exceed fK in magnitude.
-ccc Momentum and energy fluxes are unchanged — conservative overall.
+ccc Clamp each species flux to [min(0,fK), max(0,fK)] so it cannot
+ccc overshoot the upwind donor-cell flux or flip sign.
       do b=1,nspec
         f(E_EQ+b) = max(min(0.,fK(E_EQ+b)),
      &              min(max(0.,fK(E_EQ+b)), f(E_EQ+b)))

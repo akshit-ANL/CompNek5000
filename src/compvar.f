@@ -76,13 +76,6 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
-ccc Internal energy floor: HLLC energy flux can drive intE < 0 at sharp
-ccc interfaces (p < 0). Reset rhoE to a ~100 K floor to prevent Newton
-ccc divergence and Cantera receiving negative density.
-        if(uu(i,1,1,1).lt.0.) then
-          uu(i,1,1,1) = 1.e3
-          rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
-        endif
 
 ccc Newton's method for T
         new_max = 1000
