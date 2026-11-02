@@ -35,9 +35,9 @@ ccc density
         enddo
 
 ccc DEBUG: catch non-positive density before any division
-        if(vtrans(i,1,1,1,1).le.0..and.nid.eq.0) then
-          write(*,'(A,I8,A,ES12.4)') '[compvar] neg rho at pt ',i,
-     &      ' rho=',vtrans(i,1,1,1,1)
+        if(vtrans(i,1,1,1,1).le.0.) then
+          write(*,'(A,I4,A,I8,A,ES12.4)') '[compvar] neg rho rank',
+     &      nid,' pt ',i,' rho=',vtrans(i,1,1,1,1)
           do b=1,nspec
             write(*,'(A,I3,A,ES12.4)') '  rhoY(',b,')=',
      &        rkU(i,1,1,1,E_EQ+b)
