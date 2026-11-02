@@ -244,17 +244,32 @@ ccc rho
         if(rho1_min.lt.eps2) then
            rho1_avg = 0.
            do b=1,nspec
-             qavg(E_EQ+b) = 
-     &                 vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e)
+             qavg(E_EQ+b) =
+     &                 vlsc2(QQ(1,1,1,e,E_EQ+b),bm1(1,1,1,e),nxyz)
+     &                 /volel(e)
              rho1_avg = rho1_avg + qavg(E_EQ+b)
            enddo
-           thetak = (rho1_avg-eps2)/(rho1_avg-rho1_min)
-           do b=1,nspec
-             do i=1,nxyz
-               QQ(i,1,1,e,E_EQ+b) = qavg(E_EQ+b)
-     &                   + thetak*(QQ(i,1,1,e,E_EQ+b)-qavg(E_EQ+b))
-             enddo 
-           enddo
+           if(rho1_avg.le.eps2) then
+ccc element-average density is itself non-positive: cannot rescale,
+ccc just zero out all species in this element (catastrophic failure guard)
+             if(nid.eq.0) write(*,'(A,I6,A,ES12.4,A,ES12.4)')
+     &         '[pp_lim] elem ',e,' rho_avg=',rho1_avg,
+     &         ' rho_min=',rho1_min
+             do b=1,nspec
+               do i=1,nxyz
+                 QQ(i,1,1,e,E_EQ+b) = max(0.,QQ(i,1,1,e,E_EQ+b))
+               enddo
+             enddo
+           else
+             thetak = (rho1_avg-eps2)/(rho1_avg-rho1_min)
+             thetak = min(max(thetak,0.),1.)
+             do b=1,nspec
+               do i=1,nxyz
+                 QQ(i,1,1,e,E_EQ+b) = qavg(E_EQ+b)
+     &                     + thetak*(QQ(i,1,1,e,E_EQ+b)-qavg(E_EQ+b))
+               enddo
+             enddo
+           endif
         endif  
 
       enddo
