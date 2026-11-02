@@ -13,9 +13,14 @@ c---------------------------------------------------------------------
       integer i,ntot,kk
       integer ndbg(5),nglob(5),iglsum
       common /PPDBG/ ndbg
+      real dbgr(7),glmin,glsum,gdmin,gymin,own1,own2
+      real dx1,dy1,dx2,dy2,dsp
+      common /PPDBGR/ dbgr
       ntot  = nx1*ny1*nz1*nelt
 
       call izero(ndbg,5)
+      dbgr(1) = 1.e30
+      dbgr(4) = 1.e30
 
       if(istep.eq.1) call eval_dependent_vars(t)
       call copy(rhoS2,rhoS1,ntot)   
@@ -100,6 +105,24 @@ ccc DEBUG counters (element/node counts summed over stages and ranks)
       enddo
       if(nid.eq.0) write(*,'(A,I8,A,5I9)') '[ppdbg] step',istep,
      &  ' Tfloor,rho,rhoY,rU,rS:',(nglob(kk),kk=1,5)
+
+      gdmin = glmin(dbgr(1),1)
+      gymin = glmin(dbgr(4),1)
+      own1 = 0.
+      own2 = 0.
+      if(dbgr(1).eq.gdmin) own1 = 1.
+      if(dbgr(4).eq.gymin) own2 = 1.
+      dx1 = glsum(dbgr(2)*own1,1)/max(glsum(own1,1),1.)
+      dy1 = glsum(dbgr(3)*own1,1)/max(glsum(own1,1),1.)
+      dx2 = glsum(dbgr(5)*own2,1)/max(glsum(own2,1),1.)
+      dy2 = glsum(dbgr(6)*own2,1)/max(glsum(own2,1),1.)
+      dsp = glsum(dbgr(7)*own2,1)/max(glsum(own2,1),1.)
+      if(nid.eq.0) then
+        write(*,'(A,1P,3E12.4)') '[ppdbg]   min(u-ufloor) J/kg,x,y:',
+     &    gdmin,dx1,dy1
+        write(*,'(A,1P,3E12.4,0P,F5.1)')
+     &    '[ppdbg]   min(Y_i) x,y,species:',gymin,dx2,dy2,dsp
+      endif
 
       return
       end

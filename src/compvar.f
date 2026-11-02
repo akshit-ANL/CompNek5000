@@ -26,6 +26,8 @@ c---------------------------------------------------------------------
 
       integer ndbg(5)
       common /PPDBG/ ndbg
+      real dbgr(7)
+      common /PPDBGR/ dbgr
 
       n = nx1*ny1*nz1*nelt
 
@@ -56,6 +58,12 @@ ccc species
         do b=1,nspec
            Yi(i,1,1,1,b)=rkU(i,1,1,1,E_EQ+b)/vtrans(i,1,1,1,1)
            yy(b) = Yi(i,1,1,1,b)
+           if(yy(b).lt.dbgr(4)) then
+             dbgr(4) = yy(b)
+             dbgr(5) = xm1(i,1,1,1)
+             dbgr(6) = ym1(i,1,1,1)
+             dbgr(7) = real(b)
+           endif
            wminv = wminv + yy(b)/mw(b)
         enddo
         wmean(i,1,1,1) = 1./wminv
@@ -90,6 +98,11 @@ ccc products; floor against u(T_floor) instead, which keeps T>0 and p>0.
             ufloor = ufloor + yy(b)*bi(j+c)*tfloor**(c-1)
           enddo
         enddo
+        if(uu(i,1,1,1)-ufloor.lt.dbgr(1)) then
+          dbgr(1) = uu(i,1,1,1)-ufloor
+          dbgr(2) = xm1(i,1,1,1)
+          dbgr(3) = ym1(i,1,1,1)
+        endif
         if(uu(i,1,1,1).lt.ufloor) then
           ndbg(1) = ndbg(1)+1
           uu(i,1,1,1) = ufloor
