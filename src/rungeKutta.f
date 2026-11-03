@@ -198,10 +198,28 @@ c---------------------------------------------------------------------
       real wdot_sum
 
       integer i,n,b
+      logical ok
+      integer nbad
+      save nbad
+      data nbad /0/
 
       n = nx1*ny1*nz1*nelt
 
       do i=1,n
+        ok = vtrans(i,1,1,1,1).gt.0.
+        if(ok) ok = (temp1(i,1,1,1).lt.6000.)
+     &              .and.(temp1(i,1,1,1).gt.100.)
+        if(.not.ok) then
+          ! unphysical node: skip Cantera (it aborts), report the state
+          nbad = nbad+1
+          if(nbad.le.40) write(*,'(A,I5,I8,I9,1P,5E12.4)')
+     &      '[chemguard] nid,step,i,x,y,rho,T,u:',nid,istep,i,
+     &      xm1(i,1,1,1),ym1(i,1,1,1),vtrans(i,1,1,1,1),
+     &      temp1(i,1,1,1),uu(i,1,1,1)
+          do b=1,nspec
+            omg(i,1,1,1,b) = 0.
+          enddo
+        else
         do b=1,nspec
           yy(b) = Yi(i,1,1,1,b)
         enddo
@@ -218,6 +236,7 @@ c---------------------------------------------------------------------
           wdot_sum = wdot_sum + omg(i,1,1,1,b)
         enddo
         omg(i,1,1,1,nspec) = omg(i,1,1,1,nspec) - wdot_sum
+        endif
       enddo
 
       return
