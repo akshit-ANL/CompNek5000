@@ -87,28 +87,6 @@ ccc energy
         totE = rkU(i,1,1,1,E_EQ)/vtrans(i,1,1,1,1)  ! [J/kg]
         uu(i,1,1,1) = totE-kinE                     ! [J/kg]
 
-ccc Temperature floor in energy space (active even when ifclip is off).
-ccc uu is absolute (includes formation enthalpy) so uu<0 is valid for
-ccc products; floor against u(T_floor) instead, which keeps T>0 and p>0.
-        tfloor = 200.
-        ufloor = 0.
-        do b=1,nspec
-          j = (b-1)*(npa+1)
-          do c=1,npa+1
-            ufloor = ufloor + yy(b)*bi(j+c)*tfloor**(c-1)
-          enddo
-        enddo
-        if(uu(i,1,1,1)-ufloor.lt.dbgr(1)) then
-          dbgr(1) = uu(i,1,1,1)-ufloor
-          dbgr(2) = xm1(i,1,1,1)
-          dbgr(3) = ym1(i,1,1,1)
-        endif
-        if(uu(i,1,1,1).lt.ufloor) then
-          ndbg(1) = ndbg(1)+1
-          uu(i,1,1,1) = ufloor
-          rkU(i,1,1,1,E_EQ) = vtrans(i,1,1,1,1)*(uu(i,1,1,1)+kinE)
-        endif
-
 ccc Newton's method for T
         new_max = 1000
         new_tol = 1.e-8

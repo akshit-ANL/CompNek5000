@@ -13,13 +13,12 @@ c---------------------------------------------------------------------
       integer i,ntot,kk
       integer ndbg(5),nglob(5),iglsum
       common /PPDBG/ ndbg
-      real dbgr(7),glmin,glsum,gdmin,gymin,own1,own2
-      real dx1,dy1,dx2,dy2,dsp
+      real dbgr(7),glmin,glsum,gymin,own2
+      real dx2,dy2,dsp
       common /PPDBGR/ dbgr
       ntot  = nx1*ny1*nz1*nelt
 
       call izero(ndbg,5)
-      dbgr(1) = 1.e30
       dbgr(4) = 1.e30
 
       if(istep.eq.1) call eval_dependent_vars(t)
@@ -104,22 +103,15 @@ ccc DEBUG counters (element/node counts summed over stages and ranks)
         nglob(kk) = iglsum(ndbg(kk),1)
       enddo
       if(nid.eq.0) write(*,'(A,I8,A,5I9)') '[ppdbg] step',istep,
-     &  ' Tfloor,rho,rhoY,rU,rS:',(nglob(kk),kk=1,5)
+     &  ' -,rho,rhoY,rU,rS:',(nglob(kk),kk=1,5)
 
-      gdmin = glmin(dbgr(1),1)
       gymin = glmin(dbgr(4),1)
-      own1 = 0.
       own2 = 0.
-      if(dbgr(1).eq.gdmin) own1 = 1.
       if(dbgr(4).eq.gymin) own2 = 1.
-      dx1 = glsum(dbgr(2)*own1,1)/max(glsum(own1,1),1.)
-      dy1 = glsum(dbgr(3)*own1,1)/max(glsum(own1,1),1.)
       dx2 = glsum(dbgr(5)*own2,1)/max(glsum(own2,1),1.)
       dy2 = glsum(dbgr(6)*own2,1)/max(glsum(own2,1),1.)
       dsp = glsum(dbgr(7)*own2,1)/max(glsum(own2,1),1.)
       if(nid.eq.0) then
-        write(*,'(A,1P,3E12.4)') '[ppdbg]   min(u-ufloor) J/kg,x,y:',
-     &    gdmin,dx1,dy1
         write(*,'(A,1P,3E12.4,0P,F5.1)')
      &    '[ppdbg]   min(Y_i) x,y,species:',gymin,dx2,dy2,dsp
       endif
@@ -198,28 +190,10 @@ c---------------------------------------------------------------------
       real wdot_sum
 
       integer i,n,b
-      logical ok
-      integer nbad
-      save nbad
-      data nbad /0/
 
       n = nx1*ny1*nz1*nelt
 
       do i=1,n
-        ok = vtrans(i,1,1,1,1).gt.0.
-        if(ok) ok = (temp1(i,1,1,1).lt.6000.)
-     &              .and.(temp1(i,1,1,1).gt.100.)
-        if(.not.ok) then
-          ! unphysical node: skip Cantera (it aborts), report the state
-          nbad = nbad+1
-          if(nbad.le.40) write(*,'(A,I5,I8,I9,1P,5E12.4)')
-     &      '[chemguard] nid,step,i,x,y,rho,T,u:',nid,istep,i,
-     &      xm1(i,1,1,1),ym1(i,1,1,1),vtrans(i,1,1,1,1),
-     &      temp1(i,1,1,1),uu(i,1,1,1)
-          do b=1,nspec
-            omg(i,1,1,1,b) = 0.
-          enddo
-        else
         do b=1,nspec
           yy(b) = Yi(i,1,1,1,b)
         enddo
@@ -236,7 +210,6 @@ c---------------------------------------------------------------------
           wdot_sum = wdot_sum + omg(i,1,1,1,b)
         enddo
         omg(i,1,1,1,nspec) = omg(i,1,1,1,nspec) - wdot_sum
-        endif
       enddo
 
       return
