@@ -10,8 +10,16 @@ c---------------------------------------------------------------------
       
       real dtf
       
-      integer i,ntot
+      integer i,ntot,kk
+      integer ndbg(5),nglob(5),iglsum
+      common /PPDBG/ ndbg
+      real dbgr(7),glmin,glsum,gymin,own2
+      real dx2,dy2,dsp
+      common /PPDBGR/ dbgr
       ntot  = nx1*ny1*nz1*nelt
+
+      call izero(ndbg,5)
+      dbgr(4) = 1.e30
 
       if(istep.eq.1) call eval_dependent_vars(t)
       call copy(rhoS2,rhoS1,ntot)   
@@ -89,6 +97,24 @@ ccc stage 3
 
 ccc update variables
       call eval_dependent_vars(t)
+
+ccc DEBUG counters (element/node counts summed over stages and ranks)
+      do kk=1,5
+        nglob(kk) = iglsum(ndbg(kk),1)
+      enddo
+      if(nid.eq.0) write(*,'(A,I8,A,5I9)') '[ppdbg] step',istep,
+     &  ' -,rho,rhoY,rU,rS:',(nglob(kk),kk=1,5)
+
+      gymin = glmin(dbgr(4),1)
+      own2 = 0.
+      if(dbgr(4).eq.gymin) own2 = 1.
+      dx2 = glsum(dbgr(5)*own2,1)/max(glsum(own2,1),1.)
+      dy2 = glsum(dbgr(6)*own2,1)/max(glsum(own2,1),1.)
+      dsp = glsum(dbgr(7)*own2,1)/max(glsum(own2,1),1.)
+      if(nid.eq.0) then
+        write(*,'(A,1P,3E12.4,0P,F5.1)')
+     &    '[ppdbg]   min(Y_i) x,y,species:',gymin,dx2,dy2,dsp
+      endif
 
       return
       end
@@ -207,6 +233,8 @@ c---------------------------------------------------------------------
       real vlsc2
       integer n,nxyz
       integer i,e,b
+      integer ndbg(5)
+      common /PPDBG/ ndbg
 
       nxyz = lx1*ly1*lz1
       n = nx1*ny1*nz1*nelt 
@@ -242,19 +270,32 @@ ccc rho
 
         ! modify species
         if(rho1_min.lt.eps2) then
+           ndbg(2) = ndbg(2)+1
            rho1_avg = 0.
            do b=1,nspec
-             qavg(E_EQ+b) = 
-     &                 vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e)
+             qavg(E_EQ+b) =
+     &                 vlsc2(QQ(1,1,1,e,E_EQ+b),bm1(1,1,1,e),nxyz)
+     &                 /volel(e)
              rho1_avg = rho1_avg + qavg(E_EQ+b)
            enddo
-           thetak = (rho1_avg-eps2)/(rho1_avg-rho1_min)
-           do b=1,nspec
-             do i=1,nxyz
-               QQ(i,1,1,e,E_EQ+b) = qavg(E_EQ+b)
-     &                   + thetak*(QQ(i,1,1,e,E_EQ+b)-qavg(E_EQ+b))
-             enddo 
-           enddo
+           if(rho1_avg.le.eps2) then
+ccc element-average density is itself non-positive: clamp species to
+ccc zero rather than rescaling with a bad thetak
+             do b=1,nspec
+               do i=1,nxyz
+                 QQ(i,1,1,e,E_EQ+b) = max(0.,QQ(i,1,1,e,E_EQ+b))
+               enddo
+             enddo
+           else
+             thetak = (rho1_avg-eps2)/(rho1_avg-rho1_min)
+             thetak = min(max(thetak,0.),1.)
+             do b=1,nspec
+               do i=1,nxyz
+                 QQ(i,1,1,e,E_EQ+b) = qavg(E_EQ+b)
+     &                     + thetak*(QQ(i,1,1,e,E_EQ+b)-qavg(E_EQ+b))
+               enddo
+             enddo
+           endif
         endif  
 
       enddo
@@ -276,6 +317,7 @@ ccc rho*Y_i
           
           ! modify conservative variables
           if(rhoY_min.lt.0.) then
+             ndbg(3) = ndbg(3)+1
              qavg(E_EQ+b) =
      &            vlsc2(QQ(1,1,1,e,E_EQ+b),bm1(1,1,1,e),nxyz)/volel(e)        
              thetak = qavg(E_EQ+b)/(qavg(E_EQ+b)-rhoY_min)
@@ -306,11 +348,17 @@ ccc rho*u_shift
 
         ! modify conservative variables
         if(rU_min.lt.eps2) then
+           ndbg(4) = ndbg(4)+1
            do b=1,N_EQ
              qavg(b) = vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e) ! average of conserved variables in the element
            enddo
            call eval_rU_shift(qavg,rU_shift) ! rU_shift based on avg conserved variables
-           thetak = (rU_shift-eps2)/(rU_shift-rU_min)          
+           if(rU_shift.le.eps2) then
+             thetak = 0.  ! inadmissible average: scaling cannot fix it, flatten to average
+           else
+             thetak = (rU_shift-eps2)/(rU_shift-rU_min)
+             thetak = min(max(thetak,0.),1.)
+           endif
            do b=1,N_EQ
              do i=1,nxyz
                QQ(i,1,1,e,b) = qavg(b)+thetak*(QQ(i,1,1,e,b)-qavg(b)) ! rescale solution
@@ -337,6 +385,7 @@ ccc rho*s_shift
 
         ! modify conservative variables
         if(rS_min.lt.0.) then
+           ndbg(5) = ndbg(5)+1
            do b=1,N_EQ
              qavg(b) = vlsc2(QQ(1,1,1,e,b),bm1(1,1,1,e),nxyz)/volel(e) ! average of conserved variables in the element
            enddo
