@@ -78,8 +78,8 @@ ccc solver. Left state = own face values, right = (U+U_nb) - own.
          g_r   = gampi(k)-gamf(k)
 
          do b=1,nspec
-           y_l(b) = max(0.,Yif(k,b))
-           y_r(b) = max(0.,Yipi(k,b)-Yif(k,b))
+           y_l(b) = Yif(k,b)
+           y_r(b) = Yipi(k,b)-Yif(k,b)
          enddo
 
          call riemann_flux(fsn,ifl,sw0,sw1,sw_rho,xn,yn,zn
@@ -127,23 +127,12 @@ ccc left state L to the right state R. e* is total energy per volume.
 
       real fhll(N_EQ),fhllc(N_EQ)
       real un_l,un_r,a_l,a_r,s_l,s_r,s_p,s_rho,alpha
-      real p_l_ws,p_r_ws,g_l_ws,g_r_ws
       integer b
-
-ccc Clamp face-reconstructed pressures and gammas used for wave speeds only.
-ccc DG high-order interpolation can overshoot at shocks/interfaces producing
-ccc p < 0 at the face even when the cell-average state is physical. Using
-ccc max() here prevents sqrt of a negative argument; the original p_l/p_r are
-ccc still passed into the flux calls so the scheme remains conservative.
-      p_l_ws = max(p_l, 1.e-6*p_r + 1.e-20)
-      p_r_ws = max(p_r, 1.e-6*p_l + 1.e-20)
-      g_l_ws = max(g_l, 1.)
-      g_r_ws = max(g_r, 1.)
 
       un_l = u_l*xn+v_l*yn+w_l*zn
       un_r = u_r*xn+v_r*yn+w_r*zn
-      a_l  = sqrt(g_l_ws*p_l_ws/rho_l)
-      a_r  = sqrt(g_r_ws*p_r_ws/rho_r)
+      a_l  = sqrt(g_l*p_l/rho_l)
+      a_r  = sqrt(g_r*p_r/rho_r)
 
 ccc Davis wave speed estimates
       s_l = min(un_l-a_l,un_r-a_r)
@@ -153,8 +142,8 @@ ccc Davis wave speed estimates
       if(ifl.eq.1) then
          alpha = 1.
       elseif(ifl.eq.3) then
-ccc pressure-jump sensor (use clamped pressures so denominator stays positive)
-         s_p   = abs(p_r_ws-p_l_ws)/(p_r_ws+p_l_ws)
+ccc pressure-jump sensor
+         s_p   = abs(p_r-p_l)/(p_r+p_l)
          alpha = min(1.,max(0.,(s_p-sw0)/(sw1-sw0)))
 ccc Mach gate: keep HLLC if either side is subsonic; at subsonic faces
 ccc also apply density contact sensor to protect stratified interfaces.
@@ -243,14 +232,10 @@ c---------------------------------------------------------------------
       real rho_r,u_r,v_r,w_r,p_r,e_r,y_r(nspec)
 
       real f_l(N_EQ),f_r(N_EQ),q_l(N_EQ),q_r(N_EQ)
-      real p_l_c,p_r_c
       integer b
 
-      p_l_c = max(p_l, 0.)
-      p_r_c = max(p_r, 0.)
-
-      call phys_flux(f_l,xn,yn,zn,rho_l,u_l,v_l,w_l,p_l_c,e_l,y_l)
-      call phys_flux(f_r,xn,yn,zn,rho_r,u_r,v_r,w_r,p_r_c,e_r,y_r)
+      call phys_flux(f_l,xn,yn,zn,rho_l,u_l,v_l,w_l,p_l,e_l,y_l)
+      call phys_flux(f_r,xn,yn,zn,rho_r,u_r,v_r,w_r,p_r,e_r,y_r)
 
       if(s_l.ge.0.) then
          call copy(f,f_l,N_EQ)
@@ -280,29 +265,22 @@ ccc Toro's HLLC: contact speed sM, star states in the two fans.
       real rho_l,u_l,v_l,w_l,p_l,e_l,y_l(nspec)
       real rho_r,u_r,v_r,w_r,p_r,e_r,y_r(nspec)
 
-      real fK(N_EQ),qK(N_EQ),qs(N_EQ),fhll(N_EQ)
+      real fK(N_EQ),qK(N_EQ),qs(N_EQ)
       real un_l,un_r,sM,sK,fac,rhoK,uK,vK,wK,pK,eK,unK,yK(nspec)
-      real pstar,p_l_c,p_r_c
       integer b
-
-ccc Clamp face pressures for HLLC arithmetic. DG face reconstruction can
-ccc produce p < 0 at shock/interface faces; clamping prevents unphysical
-ccc star states while leaving densities and velocities unchanged.
-      p_l_c = max(p_l, 0.)
-      p_r_c = max(p_r, 0.)
 
       un_l = u_l*xn+v_l*yn+w_l*zn
       un_r = u_r*xn+v_r*yn+w_r*zn
 
       if(s_l.ge.0.) then
-         call phys_flux(f,xn,yn,zn,rho_l,u_l,v_l,w_l,p_l_c,e_l,y_l)
+         call phys_flux(f,xn,yn,zn,rho_l,u_l,v_l,w_l,p_l,e_l,y_l)
          return
       elseif(s_r.le.0.) then
-         call phys_flux(f,xn,yn,zn,rho_r,u_r,v_r,w_r,p_r_c,e_r,y_r)
+         call phys_flux(f,xn,yn,zn,rho_r,u_r,v_r,w_r,p_r,e_r,y_r)
          return
       endif
 
-      sM = (p_r_c-p_l_c+rho_l*un_l*(s_l-un_l)-rho_r*un_r*(s_r-un_r))
+      sM = (p_r-p_l+rho_l*un_l*(s_l-un_l)-rho_r*un_r*(s_r-un_r))
      &   / (rho_l*(s_l-un_l)-rho_r*(s_r-un_r))
 
       if(sM.ge.0.) then
@@ -311,7 +289,7 @@ ccc star states while leaving densities and velocities unchanged.
          uK=u_l
          vK=v_l
          wK=w_l
-         pK=p_l_c
+         pK=p_l
          eK=e_l
          unK=un_l
          do b=1,nspec
@@ -323,7 +301,7 @@ ccc star states while leaving densities and velocities unchanged.
          uK=u_r
          vK=v_r
          wK=w_r
-         pK=p_r_c
+         pK=p_r
          eK=e_r
          unK=un_r
          do b=1,nspec
@@ -333,17 +311,6 @@ ccc star states while leaving densities and velocities unchanged.
 
       call phys_flux(fK,xn,yn,zn,rhoK,uK,vK,wK,pK,eK,yK)
       call cons_state(qK,rhoK,uK,vK,wK,eK,yK)
-
-ccc Star-state pressure check: p* = pK + rhoK*(sK-unK)*(sM-unK).
-ccc With clamped pK this should be non-negative, but guard anyway.
-      pstar = pK + rhoK*(sK-unK)*(sM-unK)
-      if(pstar.le.0.) then
-        call flux_hll(fhll,s_l,s_r,xn,yn,zn,
-     &    rho_l,u_l,v_l,w_l,p_l_c,e_l,y_l,
-     &    rho_r,u_r,v_r,w_r,p_r_c,e_r,y_r)
-        call copy(f,fhll,N_EQ)
-        return
-      endif
 
       fac = rhoK*(sK-unK)/(sK-sM)
       qs(U_EQ) = fac*(uK+(sM-unK)*xn)
@@ -356,14 +323,6 @@ ccc With clamped pK this should be non-negative, but guard anyway.
 
       do b=1,N_EQ
         f(b) = fK(b)+sK*(qs(b)-qK(b))
-      enddo
-
-ccc Species positivity fix (Billet & Abgrall 2003):
-ccc Clamp each species flux to [min(0,fK), max(0,fK)] so it cannot
-ccc overshoot the upwind donor-cell flux or flip sign.
-      do b=1,nspec
-        f(E_EQ+b) = max(min(0.,fK(E_EQ+b)),
-     &              min(max(0.,fK(E_EQ+b)), f(E_EQ+b)))
       enddo
 
       return
