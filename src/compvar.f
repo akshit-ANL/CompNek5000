@@ -24,11 +24,6 @@ c---------------------------------------------------------------------
       save icalld
       data icalld /0/
 
-      integer ndbg(5)
-      common /PPDBG/ ndbg
-      real dbgr(7)
-      common /PPDBGR/ dbgr
-
       n = nx1*ny1*nz1*nelt
 
       do i=1,n
@@ -58,12 +53,6 @@ ccc species
         do b=1,nspec
            Yi(i,1,1,1,b)=rkU(i,1,1,1,E_EQ+b)/vtrans(i,1,1,1,1)
            yy(b) = Yi(i,1,1,1,b)
-           if(yy(b).lt.dbgr(4)) then
-             dbgr(4) = yy(b)
-             dbgr(5) = xm1(i,1,1,1)
-             dbgr(6) = ym1(i,1,1,1)
-             dbgr(7) = real(b)
-           endif
            wminv = wminv + yy(b)/mw(b)
         enddo
         wmean(i,1,1,1) = 1./wminv
